@@ -94,7 +94,7 @@ public class TurnService {
         Turn turn = new Turn();
         turn.setCard(turnInfo.getCardGameSessionStarted().getCard());
         turn.setUser(turnInfo.getUserGameSessionStarted().getUser());
-        turn.setGameSession(turnInfo.getUserGameSessionStarted().getGameSession());
+        turn.setGameSession(turnInfo.getGameSession());
         turn.setTurnNum(turnInfo.getTurnNum());
         turn.setPointsDifference(applyEffectsInfo.pointsDifference);
         turn.setTargetUser(
@@ -201,8 +201,8 @@ public class TurnService {
         turnInfo.setCardGameSessionStarted(cardGameSessionStarted);
         turnInfo.setUserGameSessionStarted(userGameSessionStarted);
         turnInfo.setTargetUserGameSessionStarted(targetUserGameSessionStarted);
-        turnInfo.setCardsNum(userGameSessionStarted.getGameSession().getCardsNum());
-        turnInfo.setPlayersNum(userGameSessionStarted.getGameSession().getUsersNum());
+        turnInfo.setCardsNum(gameSession.getCardsNum());
+        turnInfo.setPlayersNum(gameSession.getUsersNum());
         turnInfo.setTurnNum(Optional.ofNullable(prevTurn).map(Turn::getTurnNum).orElse(0) + 1);
         turnInfo.setGameSession(gameSession);
         turnInfo.setPlayerOrderNum(userGameSessionStarted.getTurnOrder().getOrderNum());
