@@ -1,5 +1,6 @@
 package com.example.CardGame.controllers;
 
+import com.example.CardGame.dtos.GameSessionResponseDto;
 import com.example.CardGame.security.UserPrincipal;
 import com.example.CardGame.services.GameSessionService;
 import lombok.RequiredArgsConstructor;
@@ -36,5 +37,10 @@ public class GameSessionController {
         gameSessionService.startGameSession(sessionId, userPrincipal.getId());
 
         return ResponseEntity.ok("ok");
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<GameSessionResponseDto> getGameSession(@PathVariable(name = "id") int sessionId) {
+        return ResponseEntity.ok(gameSessionService.getGameSession(sessionId));
     }
 }

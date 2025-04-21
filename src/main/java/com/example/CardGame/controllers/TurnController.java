@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 public class TurnController {
     private final TurnService turnService;
 
-    @GetMapping("/info/session/{sessionId}")
+    @GetMapping("/current/info/session/{sessionId}")
     public ResponseEntity<CurrentTurnInfoResponseDto> getCurrentTurnInfo(Authentication authentication,
                                                                          @PathVariable(name = "sessionId") int gameSessionId) {
         UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();

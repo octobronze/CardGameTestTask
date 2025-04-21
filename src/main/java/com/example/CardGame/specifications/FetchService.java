@@ -12,7 +12,9 @@ public class FetchService<T> {
         IMPLEMENTER("implementer"), ROLE("role"), COMMENTS("comments"),
         CREATOR("creator"), USER("user"), USER_GAME_SESSIONS("user_gameSessions"),
         USERS("users"), USER_GAME_SESSION_CK("userGameSessionCK"), GAME_SESSION_USERS("gameSession_users"),
-        CREATED_BY("createdBy"), GAME_SESSION("gameSession"), CARD("card");
+        CREATED_BY("createdBy"), GAME_SESSION("gameSession"), CARD("card"),
+        GAME_SESSION_STARTED_USERS("gameSessionStarted_Users"), GAME_SESSION_STARTED_CARDS("gameSessionStarted_Cards"),
+        TURNS("turns");
 
         private final String name;
 

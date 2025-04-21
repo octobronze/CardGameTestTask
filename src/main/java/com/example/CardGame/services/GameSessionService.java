@@ -1,5 +1,6 @@
 package com.example.CardGame.services;
 
+import com.example.CardGame.dtos.GameSessionResponseDto;
 import com.example.CardGame.exceptions.BadRequestException;
 import com.example.CardGame.repos.*;
 import com.example.CardGame.specifications.FetchService;
@@ -9,6 +10,7 @@ import com.example.CardGame.tables.embeddable.TurnOrder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
@@ -25,6 +27,7 @@ public class GameSessionService {
     private final User_GameSessionStartedRepository userGameSessionStartedRepository;
     private final Card_GameSessionStartedRepository cardGameSessionStartedRepository;
     private final CardService cardService;
+    private final DtoService dtoService;
 
     @Transactional
     public int createGameSession(int userId) {
@@ -41,18 +44,23 @@ public class GameSessionService {
 
     @Transactional
     public void enterGameSession(int userId, int gameSessionId) {
+        if (user_gameSessionRepository.existsByGameSession_IdAndUser_Id(gameSessionId, userId)) {
+            throw new BadRequestException(User_GameSession.ExceptionMessages.USER_EXISTS);
+        }
         User user = userRepository.findById(userId).orElseThrow(() -> new BadRequestException(User.ExceptionMessages.USER_NOT_FOUND));
         GameSession gameSession = gameSessionRepository.findByIdWithLockForUpdate(gameSessionId)
                 .orElseThrow(() -> new BadRequestException(GameSession.ExceptionMessages.NOT_FOUND));
         if (gameSession.getUsersNum() >= GameSession.Consts.MAX_PLAYERS_PER_SESSION) {
             throw new BadRequestException(GameSession.ExceptionMessages.IS_FULL);
         }
-        gameSessionRepository.save(gameSession);
+        if (!gameSession.getState().equals(GameSession.StateEnum.IN_PROGRESS)) {
+            throw new BadRequestException(GameSession.ExceptionMessages.ALREADY_STARTED);
+        }
         User_GameSession user_gameSession = new User_GameSession(user, gameSession);
         try {
             user_gameSessionRepository.save(user_gameSession);
         } catch (DataIntegrityViolationException e) {
-            throw new BadRequestException(GameSession.ExceptionMessages.ALREADY_HAS_PLAYER);
+            throw new BadRequestException(User_GameSession.ExceptionMessages.USER_EXISTS);
         }
     }
 
@@ -62,11 +70,20 @@ public class GameSessionService {
                 GameSessionSpecification.builder()
                         .id(gameSessionId)
                         .fetchService(new FetchService<>(
-                                List.of(FetchService.Field.GAME_SESSION_USERS, FetchService.Field.USER),
-                                List.of(FetchService.Field.CREATED_BY)
+                                List.of(FetchService.Field.GAME_SESSION_USERS)
                         ))
                         .build(),
                 GameSession.class
+                )
+                .orElseThrow(() -> new BadRequestException(GameSession.ExceptionMessages.NOT_FOUND));
+        gameSession = gameSessionRepository.findOne(
+                        GameSessionSpecification.builder()
+                                .gameSession(gameSession)
+                                .fetchService(new FetchService<>(
+                                        List.of(FetchService.Field.GAME_SESSION_USERS, FetchService.Field.USER),
+                                        List.of(FetchService.Field.CREATED_BY)
+                                ))
+                                .build()
                 )
                 .orElseThrow(() -> new BadRequestException(GameSession.ExceptionMessages.NOT_FOUND));
         if (!gameSession.getState().equals(GameSession.StateEnum.WAIT_FOR_PLAYERS)) {
@@ -88,10 +105,39 @@ public class GameSessionService {
     @Transactional
     public void finishGameSession(GameSession gameSession) {
         gameSession.setState(GameSession.StateEnum.FINISHED);
-        userGameSessionStartedRepository.deleteAllByGameSession(gameSession);
-        cardGameSessionStartedRepository.deleteAllByGameSession(gameSession);
-        user_gameSessionRepository.deleteAllByGameSession(gameSession);
         gameSessionRepository.save(gameSession);
+    }
+
+    @Transactional(isolation = Isolation.REPEATABLE_READ)
+    public GameSessionResponseDto getGameSession(int gameSessionId) {
+        GameSession gameSession = gameSessionRepository.findOne(
+                GameSessionSpecification.builder()
+                        .id(gameSessionId)
+                        .fetchService(new FetchService<>(
+                                List.of(FetchService.Field.GAME_SESSION_STARTED_USERS, FetchService.Field.USER)
+                        )).build()
+                )
+                .orElseThrow(() -> new BadRequestException(GameSession.ExceptionMessages.NOT_FOUND));
+        gameSession = gameSessionRepository.findOne(
+                        GameSessionSpecification.builder()
+                                .gameSession(gameSession)
+                                .fetchService(new FetchService<>(
+                                        List.of(FetchService.Field.GAME_SESSION_USERS, FetchService.Field.USER)
+                                )).build()
+                )
+                .orElseThrow(() -> new BadRequestException(GameSession.ExceptionMessages.NOT_FOUND));
+        gameSession = gameSessionRepository.findOne(
+                        GameSessionSpecification.builder()
+                                .gameSession(gameSession)
+                                .fetchService(new FetchService<>(
+                                        List.of(FetchService.Field.TURNS, FetchService.Field.CARD),
+                                        List.of(FetchService.Field.TURNS, FetchService.Field.USER),
+                                        List.of(FetchService.Field.TURNS, FetchService.Field.GAME_SESSION)
+                                )).build()
+                )
+                .orElseThrow(() -> new BadRequestException(GameSession.ExceptionMessages.NOT_FOUND));
+
+        return dtoService.gameSessionToDto(gameSession);
     }
 
     private int createDeckAndApplyCardOrderAndReturnDeckSize(GameSession gameSession) {

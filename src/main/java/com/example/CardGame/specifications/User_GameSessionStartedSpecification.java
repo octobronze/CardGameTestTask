@@ -9,6 +9,7 @@ import jakarta.persistence.criteria.Root;
 import lombok.Builder;
 import lombok.Getter;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.parameters.P;
 
 @Builder
 @Getter
@@ -25,11 +26,15 @@ public class User_GameSessionStartedSpecification implements Specification<User_
     private Integer gameSessionId;
     private Boolean isCurrent;
     private Integer orderNum;
+    private User_GameSessionStarted userGameSessionStarted;
 
     @Override
     public Predicate toPredicate(Root<User_GameSessionStarted> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
         Predicate predicate = criteriaBuilder.and();
 
+        if (userGameSessionStarted != null) {
+            predicate = criteriaBuilder.and(predicate, criteriaBuilder.equal(root, userGameSessionStarted));
+        }
         if (userId != null) {
             predicate = criteriaBuilder.and(predicate, criteriaBuilder.equal(root.get(USER).get(ID), userId));
         }

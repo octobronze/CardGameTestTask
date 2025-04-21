@@ -29,4 +29,8 @@ public class User_GameSession {
         this.user = user;
         this.gameSession = gameSession;
     }
+
+    public static class ExceptionMessages {
+        public static final String USER_EXISTS = "User exists in current game session";
+    }
 }

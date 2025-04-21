@@ -63,4 +63,8 @@ public class Card {
         public static final int BLOCK_VALUE = 1;
         public static final int DD_VALUE = 2;
     }
+    public static class ExceptionMessages {
+        public static final String INVALID_CARD_FOR_TARGET = "Target cannot be chosen with this card";
+        public static final String TARGET_NOT_CHOSEN = "Target should be chosen for this card";
+    }
 }

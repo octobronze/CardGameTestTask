@@ -16,6 +16,7 @@ public class GameSessionSpecification implements Specification<GameSession> {
     private static final String ID = "id";
 
     private Integer id;
+    private GameSession gameSession;
     private FetchService<GameSession> fetchService;
 
     @Override
@@ -24,6 +25,9 @@ public class GameSessionSpecification implements Specification<GameSession> {
 
         if (id != null) {
             predicate = criteriaBuilder.and(predicate, criteriaBuilder.equal(root.get(ID), getId()));
+        }
+        if (gameSession != null) {
+            predicate = criteriaBuilder.and(predicate, criteriaBuilder.equal(root, gameSession));
         }
         if (fetchService != null) {
             fetchService.fetch(root);

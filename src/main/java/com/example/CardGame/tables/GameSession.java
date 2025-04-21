@@ -31,8 +31,14 @@ public class GameSession {
     @Column(name = "cards_num")
     private Integer cardsNum;
 
-    @OneToMany(fetch = FetchType.LAZY, targetEntity = User_GameSession.class, mappedBy = "gameSession")
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "gameSession")
     private List<User_GameSession> gameSession_users;
+
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "gameSession")
+    private List<User_GameSessionStarted> gameSessionStarted_Users;
+
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "gameSession")
+    private List<Card_GameSessionStarted> gameSessionStarted_Cards;
 
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "gameSession")
     private List<Turn> turns;
@@ -55,8 +61,9 @@ public class GameSession {
         public static final String IS_FULL = "Game session is already full";
         public static final String NOT_FOUND = "Game session not found";
         public static final String HAS_BEEN_STARTED = "Game session already has been started";
-        public static final String ALREADY_HAS_PLAYER = "Game session already has this player";
         public static final String CAN_BE_STARTED_ONLY_BY_CREATOR = "Game session can be started only by a creator";
+        public static final String ALREADY_FINISHED = "Game session is already finished";
+        public static final String ALREADY_STARTED = "Game session is already started";
     }
 
     public enum StateEnum {
