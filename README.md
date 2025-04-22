@@ -1,5 +1,7 @@
 # Card game test task
 
+[Ссылка](https://docs.google.com/document/d/1nVzuzvv_CLTMf60AdWcy0PxwpyM8aSj8hT36tOwCcc4/edit?usp=sharing) на текст задания
+
 Api и их описание:
 
 1. /user/registration POST - регистрация пользователя.
