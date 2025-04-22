@@ -1,0 +1,645 @@
+{
+	"info": {
+		"_postman_id": "19cecbc1-c1b3-4949-bcd9-9502407b9461",
+		"name": "Card game",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "42470017"
+	},
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"login\": \"{login}\",\r\n    \"password\": \"{password}\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{host}}/user/login",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"user",
+								"login"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Login",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"login\": \"denis\",\r\n    \"password\": \"1234\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{host}}/user/login",
+									"host": [
+										"{{host}}"
+									],
+									"path": [
+										"user",
+										"login"
+									]
+								}
+							},
+							"_postman_previewlanguage": null,
+							"header": null,
+							"cookie": [],
+							"body": null
+						}
+					]
+				},
+				{
+					"name": "Registration",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"login\": \"{login}\",\r\n    \"password\": \"{password}\",\r\n    \"name\": \"{name}\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{host}}/user/registration",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"user",
+								"registration"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Registration by maxim",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"login\": \"maxim\",\r\n    \"password\": \"1234\",\r\n    \"name\": \"maxim\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{host}}/user/registration",
+									"host": [
+										"{{host}}"
+									],
+									"path": [
+										"user",
+										"registration"
+									]
+								}
+							},
+							"_postman_previewlanguage": null,
+							"header": null,
+							"cookie": [],
+							"body": null
+						},
+						{
+							"name": "Registration by egor",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"login\": \"egor\",\r\n    \"password\": \"1234\",\r\n    \"name\": \"egor\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{host}}/user/registration",
+									"host": [
+										"{{host}}"
+									],
+									"path": [
+										"user",
+										"registration"
+									]
+								}
+							},
+							"_postman_previewlanguage": null,
+							"header": null,
+							"cookie": [],
+							"body": null
+						},
+						{
+							"name": "Registration by misha",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"login\": \"misha\",\r\n    \"password\": \"1234\",\r\n    \"name\": \"misha\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{host}}/user/registration",
+									"host": [
+										"{{host}}"
+									],
+									"path": [
+										"user",
+										"registration"
+									]
+								}
+							},
+							"_postman_previewlanguage": null,
+							"header": null,
+							"cookie": [],
+							"body": null
+						},
+						{
+							"name": "Registration by artem",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"login\": \"artem\",\r\n    \"password\": \"1234\",\r\n    \"name\": \"artem\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{host}}/user/registration",
+									"host": [
+										"{{host}}"
+									],
+									"path": [
+										"user",
+										"registration"
+									]
+								}
+							},
+							"_postman_previewlanguage": null,
+							"header": null,
+							"cookie": [],
+							"body": null
+						},
+						{
+							"name": "Registration by denis",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"login\": \"denis\",\r\n    \"password\": \"1234\",\r\n    \"name\": \"denis\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{host}}/user/registration",
+									"host": [
+										"{{host}}"
+									],
+									"path": [
+										"user",
+										"registration"
+									]
+								}
+							},
+							"_postman_previewlanguage": null,
+							"header": null,
+							"cookie": [],
+							"body": null
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Session",
+			"item": [
+				{
+					"name": "Create session",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{host}}/game-session",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"game-session"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Enter session",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{host}}/game-session/enter/{sessionId}",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"game-session",
+								"enter",
+								"{sessionId}"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Enter session",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{host}}/game-session/enter/2",
+									"host": [
+										"{{host}}"
+									],
+									"path": [
+										"game-session",
+										"enter",
+										"2"
+									]
+								}
+							},
+							"_postman_previewlanguage": null,
+							"header": null,
+							"cookie": [],
+							"body": null
+						}
+					]
+				},
+				{
+					"name": "Start session",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{host}}/game-session/start/{sessionId}",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"game-session",
+								"start",
+								"{sessionId}"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Start session",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{host}}/game-session/start/1",
+									"host": [
+										"{{host}}"
+									],
+									"path": [
+										"game-session",
+										"start",
+										"1"
+									]
+								}
+							},
+							"_postman_previewlanguage": null,
+							"header": null,
+							"cookie": [],
+							"body": null
+						}
+					]
+				},
+				{
+					"name": "Get session info",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{host}}/game-session/{id}",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"game-session",
+								"{id}"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Get session info",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{host}}/game-session/2",
+									"host": [
+										"{{host}}"
+									],
+									"path": [
+										"game-session",
+										"2"
+									]
+								}
+							},
+							"_postman_previewlanguage": null,
+							"header": null,
+							"cookie": [],
+							"body": null
+						}
+					]
+				}
+			],
+			"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+						"key": "token",
+						"value": "{{token}}",
+						"type": "string"
+					}
+				]
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"exec": [
+							""
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "Turn",
+			"item": [
+				{
+					"name": "Get current turn info",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{host}}/turn/current/info/session/{sessionId}",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"turn",
+								"current",
+								"info",
+								"session",
+								"{sessionId}"
+							],
+							"query": [
+								{
+									"key": "Author",
+									"value": "Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiI3IiwiaWF0IjoxNzQ1MTU4NDI3LCJleHAiOjE3NDUyNDQ4Mjd9.5bzLiXwCpwsHgLd4VJVOWukjfrVrzGs2rbYehgExEnpylJL2N5ort_r8aSMqR4Gj",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Get current turn info",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{host}}/turn/current/info/session/2",
+									"host": [
+										"{{host}}"
+									],
+									"path": [
+										"turn",
+										"current",
+										"info",
+										"session",
+										"2"
+									],
+									"query": [
+										{
+											"key": "Author",
+											"value": "Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiI3IiwiaWF0IjoxNzQ1MTU4NDI3LCJleHAiOjE3NDUyNDQ4Mjd9.5bzLiXwCpwsHgLd4VJVOWukjfrVrzGs2rbYehgExEnpylJL2N5ort_r8aSMqR4Gj",
+											"disabled": true
+										}
+									]
+								}
+							},
+							"_postman_previewlanguage": null,
+							"header": null,
+							"cookie": [],
+							"body": null
+						}
+					]
+				},
+				{
+					"name": "Do turn",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{host}}/turn/session/{sessionId}?targetUserId={targetUserId}",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"turn",
+								"session",
+								"{sessionId}"
+							],
+							"query": [
+								{
+									"key": "targetUserId",
+									"value": "{targetUserId}"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Do turn",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{host}}/turn/session/2",
+									"host": [
+										"{{host}}"
+									],
+									"path": [
+										"turn",
+										"session",
+										"2"
+									],
+									"query": [
+										{
+											"key": "targetUserId",
+											"value": "9",
+											"disabled": true
+										}
+									]
+								}
+							},
+							"_postman_previewlanguage": null,
+							"header": null,
+							"cookie": [],
+							"body": null
+						}
+					]
+				}
+			],
+			"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+						"key": "token",
+						"value": "{{token}}",
+						"type": "string"
+					}
+				]
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"exec": [
+							""
+						]
+					}
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "token",
+			"value": "eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiI3IiwiaWF0IjoxNzQ1MjM0NTIxLCJleHAiOjE3NDUzMjA5MjF9.zjsG6VKD-dQViVvRBbv7v9EdXemC5rW4UmueUZxoYf2AIQ9ZxWodW-mBTrB3C8AN",
+			"type": "string"
+		},
+		{
+			"key": "maximToken",
+			"value": "eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiI3IiwiaWF0IjoxNzQ1MjM1MjkwLCJleHAiOjE3NDUzMjE2OTB9.uY37bE04_qDjqyXd_X9-8fmMPyJ9FxzbaPHQWHMjchW_IM6jeX6XsGpzrwJLqoy2",
+			"type": "string",
+			"disabled": true
+		},
+		{
+			"key": "denisToken",
+			"value": "eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiI4IiwiaWF0IjoxNzQ1MjM1NjUyLCJleHAiOjE3NDUzMjIwNTJ9.MkcI2l8w4oCnpCzLiJ9QJhkWLVAUYLPjarydh36kaTq06UKlhQ66TWE7LTLSZ7dE",
+			"type": "string",
+			"disabled": true
+		},
+		{
+			"key": "artemToken",
+			"value": "eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiI5IiwiaWF0IjoxNzQ1MjM1NjE2LCJleHAiOjE3NDUzMjIwMTZ9.wzGkF357E-ackPUixeKZm8ojAJN4ZScDFMS-N71qSbNqeWB-N_cl0V0-uud-PgLb",
+			"type": "string",
+			"disabled": true
+		},
+		{
+			"key": "egorToken",
+			"value": "eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIxMCIsImlhdCI6MTc0NTIzNTY2NSwiZXhwIjoxNzQ1MzIyMDY1fQ.ISTuqAG2c5wOpZdWDXFVo212Dr4OQfOq_ff0zIVNnd0pWn7bDdTZxcSN8dc7SnHn",
+			"type": "string",
+			"disabled": true
+		},
+		{
+			"key": "mishaToken",
+			"value": "eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIxMSIsImlhdCI6MTc0NTIzNTc0OSwiZXhwIjoxNzQ1MzIyMTQ5fQ.APrnYW9dXlnd7UByNIGRrVgKzj5UnxVSix5D-zUOnUbSuAQH_F4J2oe1p33OnJxh",
+			"type": "string",
+			"disabled": true
+		},
+		{
+			"key": "host",
+			"value": "localhost:8080",
+			"type": "string"
+		}
+	]
+}

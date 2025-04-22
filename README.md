@@ -29,6 +29,8 @@ Api и их описание:
     Authorization: Bearer your_token
 ```
 
+[Ссылка](card-game-collection.json) на postman-коллекцию
+
 Для запуска приложения, если использовать докер, то:
 1. Зайти в папку [dockerfiles](Dockerfiles ) через консоль
 2. Запустить команду docker-compose up
