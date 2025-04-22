@@ -184,8 +184,8 @@ class TurnServiceUnitTests {
 
 
 	@ParameterizedTest
-	@MethodSource("provideData_for_test_for_doTurnAndReturnIsGameSessionFinished_session_not_finished")
-	public void test_for_doTurnAndReturnIsGameSessionFinished_session_not_finished(int userId, int sessionId, Integer targetUserId,
+	@MethodSource("provideData_for_test_for_doTurnAndReturnIsGameSessionFinished_not_finished")
+	public void test_for_doTurnAndReturnIsGameSessionFinished_not_finished(int userId, int sessionId, Integer targetUserId,
 																				   GameSession gameSession,
 																				   User_GameSessionStarted player,
 																				   User_GameSessionStarted secondPlayer,
@@ -251,7 +251,7 @@ class TurnServiceUnitTests {
 		Assertions.assertFalse(result);
 	}
 
-	private static Stream<Arguments> provideData_for_test_for_doTurnAndReturnIsGameSessionFinished_session_not_finished() {
+	private static Stream<Arguments> provideData_for_test_for_doTurnAndReturnIsGameSessionFinished_not_finished() {
 		return Stream.of(
 				Arguments.of(FIRST_USER_ID, SESSION_ID, null,
 						GAME_SESSION_IN_PROGRESS,
@@ -266,7 +266,8 @@ class TurnServiceUnitTests {
 						SECOND_PLAYER,
 						ACTION_BLOCK_CARD_IN_SESSION,
 						null,
-						NEXT_USER_TURN_NUM + 1),
+						(NEXT_USER_TURN_NUM + 1) % SESSION_CARDS_NUM
+				),
 				Arguments.of(FIRST_USER_ID, SESSION_ID, SECOND_USER_ID,
 						GAME_SESSION_IN_PROGRESS,
 						FIRST_PLAYER,

@@ -1,0 +1,35 @@
+name: "card-game"
+services:
+  postgres:
+    build:
+      context: ./
+      dockerfile: ./db.Dockerfile
+    image: postgres-image
+    container_name: postgres-container
+    environment:
+      POSTGRES_USER: ${DATASOURCE_USERNAME}
+      POSTGRES_PASSWORD: ${DATASOURCE_PASSWORD}
+    ports:
+      - "127.0.0.1:5222:5432"
+    restart: unless-stopped
+    volumes:
+      - "./init.sql:/docker-entrypoint-initdb.d/init.sql"
+  card-game-backend:
+    build:
+      context: ./
+      additional_contexts:
+        assets: ../
+      dockerfile: ./Dockerfile
+    image: card-game-backend-image
+    container_name: card-game-backend-container
+    environment:
+      JWT_SIGNING_KEY: ${JWT_SIGNING_KEY}
+      JWT_DURATION: ${JWT_DURATION}
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DATASOURCE_PASSWORD}
+    ports:
+      - "8000:8080"
+    restart: unless-stopped
+    depends_on:
+      - postgres

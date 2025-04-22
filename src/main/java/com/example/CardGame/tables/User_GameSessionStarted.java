@@ -40,5 +40,6 @@ public class User_GameSessionStarted {
         public static final String NOT_USER_TURN = "It is not user turn";
         public static final String TARGET_USER_NOT_EXISTS = "Target user not exists";
         public static final String CURRENT_USER_CANNOT_BE_TARGET = "Current user cannot be target";
+        public static final String NO_USER_FOR_NEXT_TURN = "User for next turn not found";
     }
 }

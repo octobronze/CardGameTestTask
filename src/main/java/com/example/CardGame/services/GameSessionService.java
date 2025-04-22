@@ -53,7 +53,7 @@ public class GameSessionService {
         if (gameSession.getUsersNum() >= GameSession.Consts.MAX_PLAYERS_PER_SESSION) {
             throw new BadRequestException(GameSession.ExceptionMessages.IS_FULL);
         }
-        if (!gameSession.getState().equals(GameSession.StateEnum.IN_PROGRESS)) {
+        if (!gameSession.getState().equals(GameSession.StateEnum.WAIT_FOR_PLAYERS)) {
             throw new BadRequestException(GameSession.ExceptionMessages.ALREADY_STARTED);
         }
         User_GameSession user_gameSession = new User_GameSession(user, gameSession);

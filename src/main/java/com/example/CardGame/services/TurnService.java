@@ -37,6 +37,9 @@ public class TurnService {
 
     @Transactional(isolation = Isolation.REPEATABLE_READ)
     public CurrentTurnInfoResponseDto getCurrentTurnInfo(int userId, int sessionId) {
+        if (!gameSessionRepository.existsById(sessionId)) {
+            throw new BadRequestException(GameSession.ExceptionMessages.NOT_FOUND);
+        }
         if (!userGameSessionStartedRepository.exists(
                 User_GameSessionStartedSpecification.builder()
                         .userId(userId)
@@ -116,8 +119,7 @@ public class TurnService {
     }
 
     private void setNextTurnEntries(TurnInfo prevTurnInfo, ApplyEffectsInfo applyEffectsInfo) {
-        int nextUserTurnNum = (prevTurnInfo.getPlayerOrderNum() % prevTurnInfo.getPlayersNum()) + 1
-                + (applyEffectsInfo.skipTurn ? 1 : 0);
+        int nextUserTurnNum = ((prevTurnInfo.getPlayerOrderNum() + (applyEffectsInfo.skipTurn ? 1 : 0)) % prevTurnInfo.getPlayersNum()) + 1;
         int nextCardTurnNum = (prevTurnInfo.getCardOrderNum() % prevTurnInfo.getCardsNum()) + 1;
         int sessionId = prevTurnInfo.getGameSession().getId();
 
@@ -127,7 +129,7 @@ public class TurnService {
                                 .gameSessionId(sessionId)
                                 .orderNum(nextUserTurnNum).build(),
                         User_GameSessionStarted.class
-                ).orElseThrow(() -> new BadRequestException(User_GameSessionStarted.ExceptionMessages.NOT_USER_TURN));
+                ).orElseThrow(() -> new BadRequestException(User_GameSessionStarted.ExceptionMessages.NO_USER_FOR_NEXT_TURN));
         userGameSessionStarted.getTurnOrder().setCurrent(true);
         userGameSessionStartedRepository.save(userGameSessionStarted);
         Card_GameSessionStarted cardGameSessionStarted =

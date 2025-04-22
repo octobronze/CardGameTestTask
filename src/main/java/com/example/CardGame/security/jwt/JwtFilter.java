@@ -1,5 +1,6 @@
 package com.example.CardGame.security.jwt;
 
+import com.example.CardGame.exceptions.BadRequestException;
 import com.example.CardGame.security.UserPrincipal;
 import com.example.CardGame.security.UserPrincipalService;
 import jakarta.servlet.FilterChain;
@@ -9,6 +10,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -42,11 +44,14 @@ public class JwtFilter extends OncePerRequestFilter {
             throw new JwtException(jwtCheckResponse.responseString());
         }
 
-        UserPrincipal userPrincipal = userPrincipalService.createUserPrincipalWithJwt(token);
+        try {
+            UserPrincipal userPrincipal = userPrincipalService.createUserPrincipalWithJwt(token);
+            Authentication authentication = new UsernamePasswordAuthenticationToken(userPrincipal, null, userPrincipal.getAuthorities());
+            SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        Authentication authentication = new UsernamePasswordAuthenticationToken(userPrincipal, null, userPrincipal.getAuthorities());
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-
-        filterChain.doFilter(request, response);
+            filterChain.doFilter(request, response);
+        } catch (BadRequestException badRequestException) {
+            throw new JwtException(badRequestException.getMessage());
+        }
     }
 }

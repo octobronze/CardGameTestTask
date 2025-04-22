@@ -6,6 +6,7 @@ import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.SignatureException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -37,7 +38,7 @@ public class JwtService {
             getClaims(token, signingKey);
         } catch (ExpiredJwtException expiredJwtException) {
             return new JwtCheckResponse(false, JWT_EXPIRED);
-        } catch (MalformedJwtException signatureException) {
+        } catch (MalformedJwtException | SignatureException signatureException) {
             return new JwtCheckResponse(false, JWT_NOT_VALID);
         }
 
