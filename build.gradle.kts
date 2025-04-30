@@ -1,4 +1,5 @@
 import org.gradle.api.tasks.testing.logging.TestLogEvent
+import org.gradle.internal.impldep.com.fasterxml.jackson.databind.ser.std.MapProperty
 
 plugins {
     application
@@ -25,6 +26,10 @@ dependencies {
 
 application {
     mainClass = "com.example.CardGame.CardGameApplication"
+    val listOfEnvs = File(".env").bufferedReader().readLines()
+    applicationDefaultJvmArgs += listOfEnvs.stream().map {
+        "-D$it"
+    }.toList()
 }
 
 tasks.test {
