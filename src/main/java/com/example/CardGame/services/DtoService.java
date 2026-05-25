@@ -6,20 +6,17 @@ import com.example.CardGame.dtos.TurnResponseDto;
 import com.example.CardGame.exceptions.BadRequestException;
 import com.example.CardGame.tables.*;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
 
-import static com.example.CardGame.consts.ExceptionMessagesConsts.UNEXPECTED_BEHAVIOR;
-
 @RequiredArgsConstructor
 @Service
 public class DtoService {
+    private static final String UNEXPECTED_BEHAVIOR = "Unexpected behavior happens";
 
     public GameSessionResponseDto gameSessionToDto(GameSession gameSession) {
-        GameSessionResponseDto gameSessionResponseDto = new GameSessionResponseDto();
-
+        var gameSessionResponseDto = new GameSessionResponseDto();
         gameSessionResponseDto.setId(gameSession.getId());
         gameSessionResponseDto.setState(gameSession.getState().ordinal());
         switch (gameSession.getState()) {
@@ -29,52 +26,43 @@ public class DtoService {
                                 .map(this::user_GameSessionToPlayerDto).toList()
                 );
             }
-            case FINISHED, IN_PROGRESS -> {
+            case IN_PROGRESS, FINISHED -> {
                 gameSessionResponseDto.setPlayers(
-                        gameSession.getGameSessionStarted_Users().stream()
+                        gameSession.getGameSession_users().stream()
                                 .map(this::user_GameSessionStartedToPlayerDto).toList()
                 );
-                int currentCardNumOptional = gameSession.getGameSessionStarted_Cards().stream()
-                        .filter(x -> x.getTurnOrder().isCurrent())
-                        .map(x -> x.getTurnOrder().getOrderNum())
-                        .findFirst().orElseThrow(() -> new BadRequestException(UNEXPECTED_BEHAVIOR));
-                gameSessionResponseDto.setCardsLeft(gameSession.getCardsNum() - currentCardNumOptional + 1);
+                gameSessionResponseDto.setCardsLeft(gameSession.getCardsNumber() - gameSession.getTurns().size() + 1);
                 gameSessionResponseDto.setTurns(gameSession.getTurns().stream().map(this::turnToDto).toList());
             }
         }
-
         return gameSessionResponseDto;
     }
 
     public PlayerResponseDto user_GameSessionToPlayerDto(User_GameSession user_gameSession) {
-        PlayerResponseDto playerResponseDto = new PlayerResponseDto();
+        var playerResponseDto = new PlayerResponseDto();
         playerResponseDto.setId(user_gameSession.getUser().getId());
         playerResponseDto.setName(user_gameSession.getUser().getName());
-
         return playerResponseDto;
     }
 
-    public PlayerResponseDto user_GameSessionStartedToPlayerDto(User_GameSessionStarted user_gameSessionStarted) {
-        PlayerResponseDto playerResponseDto = new PlayerResponseDto();
-        playerResponseDto.setId(user_gameSessionStarted.getUser().getId());
-        playerResponseDto.setName(user_gameSessionStarted.getUser().getName());
-        playerResponseDto.setPoints(user_gameSessionStarted.getPoints());
-        playerResponseDto.setIsCurrentTurn(user_gameSessionStarted.getTurnOrder().isCurrent());
-        playerResponseDto.setTurnOrderNum(user_gameSessionStarted.getTurnOrder().getOrderNum());
-
+    public PlayerResponseDto user_GameSessionStartedToPlayerDto(User_GameSession user_gameSession) {
+        var playerResponseDto = new PlayerResponseDto();
+        playerResponseDto.setId(user_gameSession.getUser().getId());
+        playerResponseDto.setName(user_gameSession.getUser().getName());
+        playerResponseDto.setPoints(user_gameSession.getPoints());
+        playerResponseDto.setIsCurrentTurn(user_gameSession.getTurnData().getIsCurrent());
+        playerResponseDto.setTurnOrderNum(user_gameSession.getTurnData().getOrder());
         return playerResponseDto;
     }
 
     public TurnResponseDto turnToDto(Turn turn) {
-        TurnResponseDto turnResponseDto = new TurnResponseDto();
-
+        var turnResponseDto = new TurnResponseDto();
         turnResponseDto.setId(turn.getId());
-        turnResponseDto.setTurnNum(turn.getTurnNum());
-        turnResponseDto.setPointsDiff(turn.getPointsDifference());
+        turnResponseDto.setTurnNum(turn.getOrder());
+        turnResponseDto.setPointsDiff(turn.getGainedPoints());
         turnResponseDto.setUserId(turn.getUser().getId());
         turnResponseDto.setSessionId(turn.getGameSession().getId());
-        turnResponseDto.setTargetUserId(Optional.ofNullable(turn.getTargetUser()).map(User::getId).orElse(null));
-
+        turnResponseDto.setTargetUserId(Optional.ofNullable(turn.getTarget()).map(User::getId).orElse(null));
         return turnResponseDto;
     }
 }

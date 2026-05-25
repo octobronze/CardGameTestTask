@@ -16,16 +16,16 @@ public class GameSessionController {
 
     @PostMapping
     public ResponseEntity<Integer> createGameSession(Authentication authentication) {
-        UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+        var userPrincipal = (UserPrincipal) authentication.getPrincipal();
 
         return ResponseEntity.ok(gameSessionService.createGameSession(userPrincipal.getId()));
     }
 
-    @PostMapping("/enter/{id}")
-    public ResponseEntity<String> enterGameSession(Authentication authentication,
+    @PostMapping("/join/{id}")
+    public ResponseEntity<String> joinGameSession(Authentication authentication,
                                                    @PathVariable(name = "id") int sessionId) {
-        UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
-        gameSessionService.enterGameSession(userPrincipal.getId(), sessionId);
+        var userPrincipal = (UserPrincipal) authentication.getPrincipal();
+        gameSessionService.joinGameSession(userPrincipal.getId(), sessionId);
 
         return ResponseEntity.ok("ok");
     }
@@ -33,8 +33,8 @@ public class GameSessionController {
     @PostMapping("/start/{id}")
     public ResponseEntity<String> startGameSession(Authentication authentication,
                                                    @PathVariable(name = "id") int sessionId) {
-        UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
-        gameSessionService.startGameSession(sessionId, userPrincipal.getId());
+        var userPrincipal = (UserPrincipal) authentication.getPrincipal();
+        gameSessionService.startGameSession(userPrincipal.getId(), sessionId);
 
         return ResponseEntity.ok("ok");
     }

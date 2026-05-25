@@ -3,12 +3,12 @@ package com.example.CardGame.services;
 import com.example.CardGame.dtos.GameSessionResponseDto;
 import com.example.CardGame.exceptions.BadRequestException;
 import com.example.CardGame.repos.*;
-import com.example.CardGame.specifications.FetchService;
+import com.example.CardGame.specifications.fetch.Chain;
+import com.example.CardGame.specifications.fetch.FetchList;
 import com.example.CardGame.specifications.GameSessionSpecification;
 import com.example.CardGame.tables.*;
-import com.example.CardGame.tables.embeddable.TurnOrder;
+import com.example.CardGame.tables.embeddable.TurnData;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,159 +16,149 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
+/**
+ * Для избежания data race - lock делается на GameSession.
+ */
 @Service
 @RequiredArgsConstructor
+@Transactional(isolation = Isolation.READ_COMMITTED)
 public class GameSessionService {
     private final GameSessionRepository gameSessionRepository;
     private final UserRepository userRepository;
     private final User_GameSessionRepository user_gameSessionRepository;
-    private final User_GameSessionStartedRepository userGameSessionStartedRepository;
-    private final Card_GameSessionStartedRepository cardGameSessionStartedRepository;
-    private final CardService cardService;
+    private final Card_GameSessionRepository cardGameSessionRepository;
+    private final CardRepository cardRepository;
     private final DtoService dtoService;
 
-    @Transactional
     public int createGameSession(int userId) {
-        User user = userRepository.findById(userId).orElseThrow(() -> new BadRequestException(User.ExceptionMessages.USER_NOT_FOUND));
+        var user = userRepository.getReferenceById(userId);
         GameSession gameSession = new GameSession();
-        gameSession.setState(GameSession.StateEnum.WAIT_FOR_PLAYERS);
+        gameSession.setState(GameSession.State.WAIT_FOR_PLAYERS);
         gameSession.setCreatedBy(user);
-        int gameSessionId = gameSessionRepository.save(gameSession).getId();
-        User_GameSession user_gameSession = new User_GameSession(user, gameSession);
-        user_gameSessionRepository.save(user_gameSession);
-
-        return gameSessionId;
+        return gameSessionRepository.save(gameSession).getId();
     }
 
-    @Transactional
-    public void enterGameSession(int userId, int gameSessionId) {
-        if (user_gameSessionRepository.existsByGameSession_IdAndUser_Id(gameSessionId, userId)) {
-            throw new BadRequestException(User_GameSession.ExceptionMessages.USER_EXISTS);
+    /**
+     * Присоединяет пользователя к сессии.
+     *
+     * @param userId  пользователь
+     * @param gameSessionId  id сессии
+     */
+    public void joinGameSession(int userId, int gameSessionId) {
+        var user = userRepository.getReferenceById(userId);
+        // check
+        if (user_gameSessionRepository.existsByGameSession_IdAndUser(gameSessionId, user)) {
+            throw new BadRequestException(User_GameSession.ExceptionMessages.EXISTS);
         }
-        User user = userRepository.findById(userId).orElseThrow(() -> new BadRequestException(User.ExceptionMessages.USER_NOT_FOUND));
-        GameSession gameSession = gameSessionRepository.findByIdWithLockForUpdate(gameSessionId)
-                .orElseThrow(() -> new BadRequestException(GameSession.ExceptionMessages.NOT_FOUND));
-        if (gameSession.getUsersNum() >= GameSession.Consts.MAX_PLAYERS_PER_SESSION) {
-            throw new BadRequestException(GameSession.ExceptionMessages.IS_FULL);
-        }
-        if (!gameSession.getState().equals(GameSession.StateEnum.WAIT_FOR_PLAYERS)) {
-            throw new BadRequestException(GameSession.ExceptionMessages.ALREADY_STARTED);
-        }
-        User_GameSession user_gameSession = new User_GameSession(user, gameSession);
-        try {
-            user_gameSessionRepository.save(user_gameSession);
-        } catch (DataIntegrityViolationException e) {
-            throw new BadRequestException(User_GameSession.ExceptionMessages.USER_EXISTS);
-        }
-    }
-
-    @Transactional
-    public void startGameSession(int gameSessionId, int userId) {
-        GameSession gameSession = gameSessionRepository.findWithLockForUpdate(
+        // lock
+        var gameSession = gameSessionRepository.findWithLockForUpdate(
                 GameSessionSpecification.builder()
                         .id(gameSessionId)
-                        .fetchService(new FetchService<>(
-                                List.of(FetchService.Field.GAME_SESSION_USERS)
-                        ))
-                        .build(),
+                        .state(GameSession.State.WAIT_FOR_PLAYERS)
+                        .isFull(false).build(),
                 GameSession.class
-                )
-                .orElseThrow(() -> new BadRequestException(GameSession.ExceptionMessages.NOT_FOUND));
-        gameSession = gameSessionRepository.findOne(
-                        GameSessionSpecification.builder()
-                                .gameSession(gameSession)
-                                .fetchService(new FetchService<>(
-                                        List.of(FetchService.Field.GAME_SESSION_USERS, FetchService.Field.USER),
-                                        List.of(FetchService.Field.CREATED_BY)
-                                ))
-                                .build()
-                )
-                .orElseThrow(() -> new BadRequestException(GameSession.ExceptionMessages.NOT_FOUND));
-        if (!gameSession.getState().equals(GameSession.StateEnum.WAIT_FOR_PLAYERS)) {
-            throw new BadRequestException(GameSession.ExceptionMessages.HAS_BEEN_STARTED);
-        }
-        if (gameSession.getUsersNum() < GameSession.Consts.MIN_PLAYERS_TO_START) {
-            throw new BadRequestException(GameSession.ExceptionMessages.NOT_ENOUGH_PLAYERS);
-        }
-        if (gameSession.getCreatedBy().getId() != userId) {
-            throw new BadRequestException(GameSession.ExceptionMessages.CAN_BE_STARTED_ONLY_BY_CREATOR);
-        }
-        int deckSize = createDeckAndApplyCardOrderAndReturnDeckSize(gameSession);
-        applyUserOrder(gameSession);
-        gameSession.setState(GameSession.StateEnum.IN_PROGRESS);
-        gameSession.setCardsNum(deckSize);
+        ).orElseThrow(() -> new BadRequestException(GameSession.ExceptionMessages.NOT_FOUND));
+        var user_gameSession = new User_GameSession(user, gameSession);
+        // Может выкидывать исключение в случае если запись уже существует(возможно из-за гонки).
+        // Но ситуация остается валидной, так как транзакция откатится в случае исключения, как и должна.
+        user_gameSessionRepository.save(user_gameSession);
+        gameSession.setUsersNumber(gameSession.getUsersNumber() + 1);
         gameSessionRepository.save(gameSession);
+        // unlock
     }
 
-    @Transactional
-    public void finishGameSession(GameSession gameSession) {
-        gameSession.setState(GameSession.StateEnum.FINISHED);
-        gameSessionRepository.save(gameSession);
-    }
-
-    @Transactional(isolation = Isolation.REPEATABLE_READ)
-    public GameSessionResponseDto getGameSession(int gameSessionId) {
-        GameSession gameSession = gameSessionRepository.findOne(
+    /**
+     * блабла
+     * <p>
+     *
+     *
+     * @param userId
+     * @param gameSessionId
+     */
+    public void startGameSession(int userId, int gameSessionId) {
+        var user = userRepository.getReferenceById(userId);
+        // lock
+        var gameSession = gameSessionRepository.findWithLockForUpdate(
                 GameSessionSpecification.builder()
                         .id(gameSessionId)
-                        .fetchService(new FetchService<>(
-                                List.of(FetchService.Field.GAME_SESSION_STARTED_USERS, FetchService.Field.USER)
-                        )).build()
-                )
-                .orElseThrow(() -> new BadRequestException(GameSession.ExceptionMessages.NOT_FOUND));
-        gameSession = gameSessionRepository.findOne(
-                        GameSessionSpecification.builder()
-                                .gameSession(gameSession)
-                                .fetchService(new FetchService<>(
-                                        List.of(FetchService.Field.GAME_SESSION_USERS, FetchService.Field.USER)
-                                )).build()
-                )
-                .orElseThrow(() -> new BadRequestException(GameSession.ExceptionMessages.NOT_FOUND));
-        gameSession = gameSessionRepository.findOne(
-                        GameSessionSpecification.builder()
-                                .gameSession(gameSession)
-                                .fetchService(new FetchService<>(
-                                        List.of(FetchService.Field.TURNS, FetchService.Field.CARD),
-                                        List.of(FetchService.Field.TURNS, FetchService.Field.USER),
-                                        List.of(FetchService.Field.TURNS, FetchService.Field.GAME_SESSION)
-                                )).build()
-                )
-                .orElseThrow(() -> new BadRequestException(GameSession.ExceptionMessages.NOT_FOUND));
+                        .createdBy(user)
+                        .state(GameSession.State.WAIT_FOR_PLAYERS)
+                        .isEnoughPlayers(true).build(),
+                GameSession.class
+        ).orElseThrow(() -> new BadRequestException(GameSession.ExceptionMessages.NOT_FOUND));
+        var gameCards  = initCardsForGame(gameSession);
+        var gameUsers = initUsersForGame(gameSession);
+        cardGameSessionRepository.saveAll(gameCards);
+        user_gameSessionRepository.saveAll(gameUsers);
+        gameSession.setState(GameSession.State.IN_PROGRESS);
+        gameSession.setCardsNumber(gameCards.size());
+        gameSessionRepository.save(gameSession);
+        // unlock
+    }
 
+    public void finishGameSession(GameSession gameSession) {
+        gameSession.setState(GameSession.State.FINISHED);
+        gameSessionRepository.save(gameSession);
+    }
+
+    public GameSessionResponseDto getGameSession(int gameSessionId) {
+        var gameSession = gameSessionRepository.findOne(
+                GameSessionSpecification.builder()
+                        .id(gameSessionId)
+                        .fetchList(FetchList.of(Chain.of(GameSession_.gameSession_users, User_GameSession_.user))).build()
+        ).orElseThrow(() -> new BadRequestException(GameSession.ExceptionMessages.NOT_FOUND));
+        // Повторный вызов для fetch
+        gameSessionRepository.findOne(
+                GameSessionSpecification.builder()
+                        .id(gameSessionId)
+                        .fetchList(FetchList.of(
+                                Chain.of(GameSession_.turns, Turn_.card),
+                                Chain.of(GameSession_.turns, Turn_.user),
+                                Chain.of(GameSession_.turns, Turn_.gameSession)
+                        )).build()
+        ).orElseThrow(() -> new BadRequestException(GameSession.ExceptionMessages.NOT_FOUND));
+        // Повторный вызов для fetch
+        gameSessionRepository.findOne(
+                GameSessionSpecification.builder()
+                        .id(gameSessionId)
+                        .fetchList(FetchList.of(Chain.of(GameSession_.gameSession_Cards))).build()
+        ).orElseThrow(() -> new BadRequestException(GameSession.ExceptionMessages.NOT_FOUND));
         return dtoService.gameSessionToDto(gameSession);
     }
 
-    private int createDeckAndApplyCardOrderAndReturnDeckSize(GameSession gameSession) {
-        List<Card> deck = cardService.getDeckForGameSessionStart();
-
-        List<Card_GameSessionStarted> card_gameSessionStartedList = new ArrayList<>();
-        for (int i = 0; i < deck.size(); i ++) {
-            TurnOrder turnOrder = new TurnOrder(i + 1, false);
-            Card_GameSessionStarted _cardGameSessionStarted = new Card_GameSessionStarted(gameSession, deck.get(i), turnOrder);
-
-            card_gameSessionStartedList.add(_cardGameSessionStarted);
+    private List<Card_GameSession> initCardsForGame(GameSession gameSession) {
+        var shuffledCards = getShuffledCards();
+        var card_gameSessionList = new ArrayList<Card_GameSession>();
+        for (int i = 0; i < shuffledCards.size(); i ++) {
+            var card_gameSession = new Card_GameSession(gameSession, shuffledCards.get(i), i + 1);
+            card_gameSessionList.add(card_gameSession);
         }
-        card_gameSessionStartedList.get(0).getTurnOrder().setCurrent(true);
-        cardGameSessionStartedRepository.saveAll(card_gameSessionStartedList);
-
-        return deck.size();
+        card_gameSessionList.get(0).getTurnData().setIsCurrent(true);
+        return card_gameSessionList;
     }
 
-    private void applyUserOrder(GameSession gameSession) {
-        List<User> users = gameSession.getGameSession_users().stream()
-                .map(User_GameSession::getUser).collect(Collectors.toList());
-        Collections.shuffle(users);
-
-        List<User_GameSessionStarted> user_gameSessionStartedList = new ArrayList<>();
-        for (int i = 0; i < users.size(); i ++) {
-            TurnOrder turnOrder = new TurnOrder(i + 1, false);
-            User_GameSessionStarted user_gameSessionStarted = new User_GameSessionStarted(users.get(i), gameSession, turnOrder);
-
-            user_gameSessionStartedList.add(user_gameSessionStarted);
+    private List<User_GameSession> initUsersForGame(GameSession gameSession) {
+        var shuffledUsers = getShuffledUsers(gameSession);
+        for (int i = 0; i < shuffledUsers.size(); i ++) {
+            var user = shuffledUsers.get(i);
+            user.setTurnData(new TurnData());
+            user.getTurnData().setOrder(i + 1);
+            user.setPoints(0);
         }
-        user_gameSessionStartedList.get(0).getTurnOrder().setCurrent(true);
-        userGameSessionStartedRepository.saveAll(user_gameSessionStartedList);
+        shuffledUsers.get(0).getTurnData().setIsCurrent(true);
+        return shuffledUsers;
+    }
+
+    private List<Card> getShuffledCards() {
+        var cards = cardRepository.findAll();
+        Collections.shuffle(cards);
+        return cards;
+    }
+
+    private List<User_GameSession> getShuffledUsers(GameSession gameSession) {
+        var users = gameSession.getGameSession_users();
+        Collections.shuffle(users);
+        return users;
     }
 }

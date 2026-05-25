@@ -4,14 +4,14 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.FieldNameConstants;
 
 @Entity
-@Table(name = "card", uniqueConstraints = {
-        @UniqueConstraint(columnNames = "name")
-})
+@Table(name = "card")
 @Getter
 @Setter
 @NoArgsConstructor
+@FieldNameConstants
 public class Card {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -19,25 +19,25 @@ public class Card {
 
     @Column(name = "type", nullable = false)
     @Enumerated(value = EnumType.ORDINAL)
-    private Card.TypeEnum type;
+    private Card.Type type;
 
     @Column(name = "action_card_type")
     @Enumerated(value = EnumType.ORDINAL)
-    private Card.ActionCardTypeEnum actionCardType;
+    private Card.ActionCardType actionCardType;
 
     @Column(name = "value", nullable = false)
     private int value;
 
-    @Column(name = "name")
+    @Column(name = "name", unique = true)
     private String name;
 
 
-    public enum TypeEnum {
+    public enum Type {
         POINTS_CARD("Points card"), ACTION_CARD("Action card");
 
         private final String name;
 
-        TypeEnum(String name) {
+        Type(String name) {
             this.name = name;
         }
 
@@ -45,12 +45,13 @@ public class Card {
             return name;
         }
     }
-    public enum ActionCardTypeEnum {
+
+    public enum ActionCardType {
         BLOCK("Block"), STEAL("Steal"), DOUBLE_DOWN("DoubleDown");
 
         private final String name;
 
-        ActionCardTypeEnum(String name) {
+        ActionCardType(String name) {
             this.name = name;
         }
 

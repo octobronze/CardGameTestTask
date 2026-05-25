@@ -1,69 +1,61 @@
 package com.example.CardGame.services;
 
 import com.example.CardGame.dtos.CurrentTurnInfoResponseDto;
-import com.example.CardGame.dtos.GameSessionResponseDto;
 import com.example.CardGame.exceptions.BadRequestException;
-import com.example.CardGame.repos.Card_GameSessionStartedRepository;
+import com.example.CardGame.repos.Card_GameSessionRepository;
 import com.example.CardGame.repos.GameSessionRepository;
 import com.example.CardGame.repos.TurnRepository;
-import com.example.CardGame.repos.User_GameSessionStartedRepository;
-import com.example.CardGame.specifications.Card_GameSessionStartedSpecification;
-import com.example.CardGame.specifications.FetchService;
+import com.example.CardGame.repos.User_GameSessionRepository;
+import com.example.CardGame.specifications.Card_GameSessionSpecification;
 import com.example.CardGame.specifications.GameSessionSpecification;
-import com.example.CardGame.specifications.User_GameSessionStartedSpecification;
+import com.example.CardGame.specifications.User_GameSessionSpecification;
 import com.example.CardGame.tables.*;
+import jakarta.annotation.Nullable;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import org.springframework.boot.autoconfigure.security.SecurityProperties;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.Optional;
 
-import static com.example.CardGame.consts.ExceptionMessagesConsts.UNEXPECTED_BEHAVIOR;
-
+/**
+ * Для избежания data race - lock делается на GameSession.
+ */
 @Service
 @RequiredArgsConstructor
+@Transactional(isolation = Isolation.READ_COMMITTED)
 public class TurnService {
     private final TurnRepository turnRepository;
-    private final User_GameSessionStartedRepository userGameSessionStartedRepository;
-    private final Card_GameSessionStartedRepository cardGameSessionStartedRepository;
+    private final Card_GameSessionRepository card_gameSessionRepository;
     private final GameSessionService gameSessionService;
     private final GameSessionRepository gameSessionRepository;
+    private final User_GameSessionRepository user_gameSessionRepository;
 
-    @Transactional(isolation = Isolation.REPEATABLE_READ)
-    public CurrentTurnInfoResponseDto getCurrentTurnInfo(int userId, int sessionId) {
-        if (!gameSessionRepository.existsById(sessionId)) {
+    public CurrentTurnInfoResponseDto getCurrentTurnInfo(int userId, int gameSessionId) {
+        if (!gameSessionRepository.existsById(gameSessionId)) {
             throw new BadRequestException(GameSession.ExceptionMessages.NOT_FOUND);
         }
-        if (!userGameSessionStartedRepository.exists(
-                User_GameSessionStartedSpecification.builder()
+        if (!user_gameSessionRepository.exists(
+                User_GameSessionSpecification.builder()
                         .userId(userId)
-                        .gameSessionId(sessionId)
+                        .gameSessionId(gameSessionId)
                         .isCurrent(true).build()
         )) {
-            throw new BadRequestException(User_GameSessionStarted.ExceptionMessages.NOT_USER_TURN);
+            throw new BadRequestException(User_GameSession.ExceptionMessages.NOT_USER_TURN);
         }
-        Card card =
-                cardGameSessionStartedRepository.findOne(
-                        Card_GameSessionStartedSpecification.builder()
-                                .gameSessionId(sessionId)
-                                .isCurrent(true)
-                                .fetchService(new FetchService<>(
-                                        List.of(FetchService.Field.CARD)
-                                )).build()
-                ).orElseThrow(() -> new BadRequestException(Card_GameSessionStarted.ExceptionMessage.CURRENT_CARD_NOT_FOUND))
-                        .getCard();
+        var card = card_gameSessionRepository.findOne(
+                Card_GameSessionSpecification.builder()
+                        .gameSessionId(gameSessionId)
+                        .isCurrent(true).build()
+        ).orElseThrow(() -> new BadRequestException(Card_GameSession.ExceptionMessage.CURRENT_CARD_NOT_FOUND)).getCard();
 
-        CurrentTurnInfoResponseDto responseDto = new CurrentTurnInfoResponseDto();
+        var responseDto = new CurrentTurnInfoResponseDto();
         responseDto.setCardType(card.getType().getName());
         responseDto.setActionCardType(
-                Optional.ofNullable(card.getActionCardType())
-                        .map(Card.ActionCardTypeEnum::getName).orElse(null)
+                Optional.ofNullable(card.getActionCardType()).map(Card.ActionCardType::getName).orElse(null)
         );
         responseDto.setCardName(card.getName());
         responseDto.setCardValue(card.getValue());
@@ -71,200 +63,143 @@ public class TurnService {
         return responseDto;
     }
 
-    @Transactional
-    public boolean doTurnAndReturnIsGameSessionFinished(int userId, int sessionId, Integer targetUserId) {
-        TurnInfo turnInfo = getTurnInfo(userId, sessionId, targetUserId);
-        ApplyEffectsInfo applyEffectsInfo = applyEffects(
-                turnInfo.getUserGameSessionStarted(),
-                turnInfo.cardGameSessionStarted.getCard(),
-                turnInfo.getTargetUserGameSessionStarted()
-        );
-        Turn turn = initTurn(turnInfo, applyEffectsInfo);
-        turnRepository.save(turn);
-
-        if (applyEffectsInfo.isReachedMaxPoints()
-                || turn.getTurnNum() == turn.getGameSession().getCardsNum()) {
+    public boolean doTurn(int userId, int sessionId, @Nullable Integer targetUserId) {
+        // Сразу делаем лок на сессии, чтобы не скрывать его в кишках других методов.
+        if (!gameSessionRepository.existsWithLockForUpdate(GameSessionSpecification.builder().id(sessionId).build(), GameSession.class)) {
+            throw new BadRequestException(GameSession.ExceptionMessages.NOT_FOUND);
+        }
+        var turnInfo = getTurnInfo(userId, sessionId, targetUserId);
+        var applyEffectsInfo = applyEffects(turnInfo.getUser(), turnInfo.getCard().getCard(), turnInfo.getTarget());
+        commitTurn(turnInfo, applyEffectsInfo);
+        unsetCurrentTurnEntries(turnInfo);
+        if (isGameFinished(turnInfo)) {
             gameSessionService.finishGameSession(turnInfo.getGameSession());
             return true;
         } else {
-            commitTurnEntries(turnInfo);
             setNextTurnEntries(turnInfo, applyEffectsInfo);
             return false;
         }
     }
 
-    private Turn initTurn(TurnInfo turnInfo, ApplyEffectsInfo applyEffectsInfo) {
-        Turn turn = new Turn();
-        turn.setCard(turnInfo.getCardGameSessionStarted().getCard());
-        turn.setUser(turnInfo.getUserGameSessionStarted().getUser());
-        turn.setGameSession(turnInfo.getGameSession());
-        turn.setTurnNum(turnInfo.getTurnNum());
-        turn.setPointsDifference(applyEffectsInfo.pointsDifference);
-        turn.setTargetUser(
-                Optional.ofNullable(turnInfo.getTargetUserGameSessionStarted())
-                        .map(User_GameSessionStarted::getUser).orElse(null)
-        );
+    private void commitTurn(TurnInfo turnInfo, ApplyEffectsInfo applyEffectsInfo) {
+        var turn = initTurn(turnInfo, applyEffectsInfo);
+        turnRepository.save(turn);
+    }
 
+    private Turn initTurn(TurnInfo turnInfo, ApplyEffectsInfo applyEffectsInfo) {
+        var turn = new Turn();
+        turn.setCard(turnInfo.getCard().getCard());
+        turn.setUser(turnInfo.getUser().getUser());
+        turn.setGameSession(turnInfo.getGameSession());
+        turn.setOrder(turnInfo.getTurnOrder());
+        turn.setGainedPoints(applyEffectsInfo.getGainedPoints());
+        turn.setTarget(Optional.ofNullable(turnInfo.getTarget()).map(User_GameSession::getUser).orElse(null));
         return turn;
     }
 
-    private void commitTurnEntries(TurnInfo turnInfo) {
-        turnInfo.getUserGameSessionStarted().getTurnOrder().setCurrent(false);
-        userGameSessionStartedRepository.save(turnInfo.getUserGameSessionStarted());
-        turnInfo.getCardGameSessionStarted().getTurnOrder().setCurrent(false);
-        cardGameSessionStartedRepository.save(turnInfo.getCardGameSessionStarted());
-        if (turnInfo.getTargetUserGameSessionStarted() != null) {
-            userGameSessionStartedRepository.save(turnInfo.getTargetUserGameSessionStarted());
+    private boolean isGameFinished(TurnInfo turnInfo) {
+        return turnInfo.getUser().getPoints() == GameSession.Consts.MAX_POINTS
+                || turnInfo.getTurnOrder() == turnInfo.getGameSession().getCardsNumber();
+    }
+
+    private void unsetCurrentTurnEntries(TurnInfo turnInfo) {
+        turnInfo.getUser().getTurnData().setIsCurrent(false);
+        user_gameSessionRepository.save(turnInfo.getUser());
+        turnInfo.getCard().getTurnData().setIsCurrent(false);
+        card_gameSessionRepository.save(turnInfo.getCard());
+        if (turnInfo.getTarget() != null) {
+            user_gameSessionRepository.save(turnInfo.getTarget());
         }
     }
 
     private void setNextTurnEntries(TurnInfo prevTurnInfo, ApplyEffectsInfo applyEffectsInfo) {
-        int nextUserTurnNum = ((prevTurnInfo.getPlayerOrderNum() + (applyEffectsInfo.skipTurn ? 1 : 0)) % prevTurnInfo.getPlayersNum()) + 1;
-        int nextCardTurnNum = (prevTurnInfo.getCardOrderNum() % prevTurnInfo.getCardsNum()) + 1;
+        int nextUserTurnOrder = ((prevTurnInfo.getUserOrder() + (applyEffectsInfo.skipTurn ? 1 : 0)) % prevTurnInfo.getGameSession().getUsersNumber()) + 1;
+        int nextCardTurnOrder = (prevTurnInfo.getCardOrder() % prevTurnInfo.getGameSession().getCardsNumber()) + 1;
         int sessionId = prevTurnInfo.getGameSession().getId();
 
-        User_GameSessionStarted userGameSessionStarted =
-                userGameSessionStartedRepository.findWithLockForUpdate(
-                        User_GameSessionStartedSpecification.builder()
-                                .gameSessionId(sessionId)
-                                .orderNum(nextUserTurnNum).build(),
-                        User_GameSessionStarted.class
-                ).orElseThrow(() -> new BadRequestException(User_GameSessionStarted.ExceptionMessages.NO_USER_FOR_NEXT_TURN));
-        userGameSessionStarted.getTurnOrder().setCurrent(true);
-        userGameSessionStartedRepository.save(userGameSessionStarted);
-        Card_GameSessionStarted cardGameSessionStarted =
-                cardGameSessionStartedRepository.findWithLockForUpdate(
-                        Card_GameSessionStartedSpecification.builder()
-                                .gameSessionId(sessionId)
-                                .orderNum(nextCardTurnNum).build(),
-                        Card_GameSessionStarted.class
-                ).orElseThrow(() -> new BadRequestException(Card_GameSessionStarted.ExceptionMessage.CURRENT_CARD_NOT_FOUND));
-        cardGameSessionStarted.getTurnOrder().setCurrent(true);
-        cardGameSessionStartedRepository.save(cardGameSessionStarted);
+        var user = user_gameSessionRepository.findOne(
+                User_GameSessionSpecification.builder()
+                        .gameSessionId(sessionId)
+                        .order(nextUserTurnOrder).build()
+        ).orElseThrow(() -> new BadRequestException(User_GameSession.ExceptionMessages.NO_USER_FOR_NEXT_TURN));
+        user.getTurnData().setIsCurrent(true);
+        user_gameSessionRepository.save(user);
+
+        var card = card_gameSessionRepository.findOne(
+                Card_GameSessionSpecification.builder()
+                        .gameSessionId(sessionId)
+                        .order(nextCardTurnOrder).build()
+        ).orElseThrow(() -> new BadRequestException(Card_GameSession.ExceptionMessage.CURRENT_CARD_NOT_FOUND));
+        card.getTurnData().setIsCurrent(true);
+        card_gameSessionRepository.save(card);
     }
 
-    private TurnInfo getTurnInfo(int userId, int sessionId, Integer targetUserId) {
-        GameSession gameSession = gameSessionRepository.findWithLockForUpdate(
-                GameSessionSpecification.builder()
-                        .id(sessionId).build(),
-                GameSession.class
+    private TurnInfo getTurnInfo(int userId, int sessionId, @Nullable Integer targetId) {
+        var gameSession = gameSessionRepository.findOne(
+                GameSessionSpecification.builder().id(sessionId).build()
         ).orElseThrow(() -> new BadRequestException(GameSession.ExceptionMessages.NOT_FOUND));
-        if (gameSession.getState().equals(GameSession.StateEnum.FINISHED)) {
+        if (gameSession.getState().equals(GameSession.State.FINISHED)) {
             throw new BadRequestException(GameSession.ExceptionMessages.ALREADY_FINISHED);
         }
-        User_GameSessionStarted userGameSessionStarted =
-                userGameSessionStartedRepository.findWithLockForUpdate(
-                        User_GameSessionStartedSpecification.builder()
-                                .userId(userId)
-                                .gameSessionId(sessionId)
-                                .isCurrent(true).build(),
-                        User_GameSessionStarted.class
-                ).orElseThrow(() -> new BadRequestException(User_GameSessionStarted.ExceptionMessages.NOT_USER_TURN));
-        userGameSessionStarted = userGameSessionStartedRepository.findOne(
-                User_GameSessionStartedSpecification.builder()
-                        .userGameSessionStarted(userGameSessionStarted)
-                        .fetchService(
-                                new FetchService<>(
-                                        List.of(FetchService.Field.USER)
-                                )
-                        ).build()
-        ).orElseThrow(() -> new BadRequestException(User_GameSessionStarted.ExceptionMessages.NOT_USER_TURN));
-        Card_GameSessionStarted cardGameSessionStarted =
-                cardGameSessionStartedRepository.findWithLockForUpdate(
-                        Card_GameSessionStartedSpecification.builder()
-                                .gameSessionId(sessionId)
-                                .isCurrent(true)
-                                .fetchService(new FetchService<>(
-                                        List.of(FetchService.Field.CARD)
-                                )).build(),
-                        Card_GameSessionStarted.class
-                ).orElseThrow(() -> new BadRequestException(Card_GameSessionStarted.ExceptionMessage.CURRENT_CARD_NOT_FOUND));
-        User_GameSessionStarted targetUserGameSessionStarted = null;
-        if (targetUserId != null) {
-            targetUserGameSessionStarted = userGameSessionStartedRepository.findWithLockForUpdate(
-                    User_GameSessionStartedSpecification.builder()
-                            .userId(targetUserId)
-                            .gameSessionId(sessionId).build(),
-                    User_GameSessionStarted.class
-            ).orElseThrow(() -> new BadRequestException(User_GameSessionStarted.ExceptionMessages.TARGET_USER_NOT_EXISTS));
-            targetUserGameSessionStarted = userGameSessionStartedRepository.findOne(
-                    User_GameSessionStartedSpecification.builder()
-                            .userGameSessionStarted(targetUserGameSessionStarted)
-                            .fetchService(
-                                    new FetchService<>(
-                                            List.of(FetchService.Field.USER)
-                                    )
-                            ).build()
-            ).orElseThrow(() -> new BadRequestException(User_GameSessionStarted.ExceptionMessages.TARGET_USER_NOT_EXISTS));
-        }
-        Turn prevTurn = turnRepository.findFirstByGameSession_IdOrderByTurnNumDesc(sessionId).orElse(null);
+        var user = user_gameSessionRepository.findOne(
+                User_GameSessionSpecification.builder()
+                        .userId(userId)
+                        .gameSessionId(sessionId)
+                        .isCurrent(true).build()
+        ).orElseThrow(() -> new BadRequestException(User_GameSession.ExceptionMessages.NOT_USER_TURN));
+        var card = card_gameSessionRepository.findOne(
+                Card_GameSessionSpecification.builder()
+                        .gameSessionId(sessionId)
+                        .isCurrent(true).build()
+        ).orElseThrow(() -> new BadRequestException(Card_GameSession.ExceptionMessage.CURRENT_CARD_NOT_FOUND));
+        var target = Optional.ofNullable(targetId).map(id -> user_gameSessionRepository.findOne(
+                User_GameSessionSpecification.builder()
+                        .userId(id)
+                        .gameSessionId(sessionId).build())
+                        .orElseThrow(() -> new BadRequestException(User_GameSession.ExceptionMessages.TARGET_USER_NOT_EXISTS))
+        ).orElse(null);
+        var previousTurn = turnRepository.findFirstByGameSession_IdOrderByOrderDesc(sessionId).orElse(null);
 
         TurnInfo turnInfo = new TurnInfo();
-        turnInfo.setCardGameSessionStarted(cardGameSessionStarted);
-        turnInfo.setUserGameSessionStarted(userGameSessionStarted);
-        turnInfo.setTargetUserGameSessionStarted(targetUserGameSessionStarted);
-        turnInfo.setCardsNum(gameSession.getCardsNum());
-        turnInfo.setPlayersNum(gameSession.getUsersNum());
-        turnInfo.setTurnNum(Optional.ofNullable(prevTurn).map(Turn::getTurnNum).orElse(0) + 1);
+        turnInfo.setCard(card);
+        turnInfo.setUser(user);
+        turnInfo.setTarget(target);
+        turnInfo.setTurnOrder(Optional.ofNullable(previousTurn).map(Turn::getOrder).orElse(0) + 1);
         turnInfo.setGameSession(gameSession);
-        turnInfo.setPlayerOrderNum(userGameSessionStarted.getTurnOrder().getOrderNum());
-        turnInfo.setCardOrderNum(cardGameSessionStarted.getTurnOrder().getOrderNum());
+        turnInfo.setUserOrder(user.getTurnData().getOrder());
+        turnInfo.setCardOrder(card.getTurnData().getOrder());
 
         return turnInfo;
     }
 
-    private ApplyEffectsInfo applyEffects(User_GameSessionStarted currentUser, Card card, User_GameSessionStarted targetUser) {
-        ApplyEffectsInfo applyEffectsInfo = new ApplyEffectsInfo();
-
-        if (targetUser != null
-                && (card.getActionCardType() == null
-                || !card.getActionCardType().equals(Card.ActionCardTypeEnum.STEAL))) {
-            throw new BadRequestException(Card.ExceptionMessages.INVALID_CARD_FOR_TARGET);
-        }
-
+    private ApplyEffectsInfo applyEffects(User_GameSession user, Card card, User_GameSession target) {
+        var applyEffectsInfo = new ApplyEffectsInfo();
         switch (card.getType()) {
             case ACTION_CARD -> {
                 switch (card.getActionCardType()) {
                     case BLOCK -> {
-                        if (card.getValue() == Card.Consts.BLOCK_VALUE) {
-                            applyEffectsInfo.setSkipTurn(true);
-                        }
+                        applyEffectsInfo.setSkipTurn(true);
                     }
                     case STEAL -> {
-                        if (targetUser == null) {
-                            throw new BadRequestException(Card.ExceptionMessages.TARGET_NOT_CHOSEN);
-                        }
-                        if (targetUser.getUser().getId() == currentUser.getUser().getId()) {
-                            throw new BadRequestException(User_GameSessionStarted.ExceptionMessages.CURRENT_USER_CANNOT_BE_TARGET);
-                        }
-                        int pointsToSteal = Math.min(card.getValue(), targetUser.getPoints());
-                        targetUser.setPoints(targetUser.getPoints() - pointsToSteal);
-                        int targetPoints = Math.min(currentUser.getPoints() + pointsToSteal, GameSession.Consts.MAX_POINTS);
-                        int pointsDiff = targetPoints - currentUser.getPoints();
-                        currentUser.setPoints(targetPoints);
-                        applyEffectsInfo.setPointsDifference(pointsDiff);
+                        int targetFinalPoints = Math.max(target.getPoints() - card.getValue(), 0);
+                        int userFinalPoints = Math.min(user.getPoints() + (target.getPoints() - targetFinalPoints), GameSession.Consts.MAX_POINTS);
+                        applyEffectsInfo.setGainedPoints(userFinalPoints - user.getPoints());
+                        target.setPoints(targetFinalPoints);
+                        user.setPoints(userFinalPoints);
                     }
                     case DOUBLE_DOWN -> {
-                        if (card.getValue() == Card.Consts.DD_VALUE) {
-                            int targetPoints = Math.min(currentUser.getPoints() * 2, GameSession.Consts.MAX_POINTS);
-                            int pointsDiff = targetPoints - currentUser.getPoints();
-                            currentUser.setPoints(targetPoints);
-                            applyEffectsInfo.setPointsDifference(pointsDiff);
-                        }
+                        int finalPoints = Math.min(user.getPoints() * 2, GameSession.Consts.MAX_POINTS);
+                        applyEffectsInfo.setGainedPoints(finalPoints - user.getPoints());
+                        user.setPoints(finalPoints);
                     }
                 }
             }
             case POINTS_CARD -> {
-                int targetPoints = Math.min(currentUser.getPoints() + card.getValue(), GameSession.Consts.MAX_POINTS);
-                int pointsDiff = targetPoints - currentUser.getPoints();
-                currentUser.setPoints(targetPoints);
-                applyEffectsInfo.setPointsDifference(pointsDiff);
+                int finalPoints = Math.min(user.getPoints() + card.getValue(), GameSession.Consts.MAX_POINTS);
+                applyEffectsInfo.setGainedPoints(finalPoints - user.getPoints());
+                user.setPoints(finalPoints);
             }
         }
-        if (currentUser.getPoints() == GameSession.Consts.MAX_POINTS) {
-            applyEffectsInfo.setReachedMaxPoints(true);
-        }
-
         return applyEffectsInfo;
     }
 
@@ -272,15 +207,13 @@ public class TurnService {
     @Setter
     @Getter
     private static class TurnInfo {
-        User_GameSessionStarted userGameSessionStarted;
-        Card_GameSessionStarted cardGameSessionStarted;
-        User_GameSessionStarted targetUserGameSessionStarted;
+        User_GameSession user;
+        User_GameSession target;
+        Card_GameSession card;
         GameSession gameSession;
-        int turnNum;
-        int cardsNum;
-        int playersNum;
-        int cardOrderNum;
-        int playerOrderNum;
+        int turnOrder;
+        int cardOrder;
+        int userOrder;
     }
 
     @NoArgsConstructor
@@ -288,7 +221,6 @@ public class TurnService {
     @Getter
     private static class ApplyEffectsInfo {
         boolean skipTurn = false;
-        boolean reachedMaxPoints = false;
-        int pointsDifference = 0;
+        int gainedPoints = 0;
     }
 }

@@ -1,15 +1,13 @@
 package com.example.CardGame.dtos;
 
-import com.example.CardGame.tables.GameSession;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.util.List;
 
 @NoArgsConstructor
 @Getter
 @Setter
+@AllArgsConstructor
 public class GameSessionResponseDto {
     private int id;
     private List<PlayerResponseDto> players;

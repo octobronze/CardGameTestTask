@@ -1,19 +1,19 @@
 package com.example.CardGame.tables;
 
 import com.example.CardGame.tables.composite_keys.GameSession_CardCK;
-import com.example.CardGame.tables.embeddable.TurnOrder;
+import com.example.CardGame.tables.embeddable.TurnData;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Table(name = "card_to_game_session_card_started")
+@Table(name = "card_to_game_session")
 @Entity
 @Getter
 @Setter
 @NoArgsConstructor
 @IdClass(GameSession_CardCK.class)
-public class Card_GameSessionStarted {
+public class Card_GameSession {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "game_session_id")
     @Id
@@ -25,12 +25,12 @@ public class Card_GameSessionStarted {
     protected Card card;
 
     @Embedded
-    private TurnOrder turnOrder;
+    private TurnData turnData;
 
-    public Card_GameSessionStarted(GameSession gameSession, Card card, TurnOrder turnOrder) {
+    public Card_GameSession(GameSession gameSession, Card card, int order) {
         this.gameSession = gameSession;
         this.card = card;
-        this.turnOrder = turnOrder;
+        this.turnData = new TurnData(order, false);
     }
 
     public static class ExceptionMessage {

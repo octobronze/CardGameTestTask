@@ -9,48 +9,39 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.util.Objects;
-
 @RestControllerAdvice
 public class ControllerAdvice {
     @ExceptionHandler(value = BadRequestException.class)
     public ResponseEntity<ExceptionResponseDto> handleBadRequestException(BadRequestException exception) {
-        ExceptionResponseDto response = new ExceptionResponseDto();
-
-        response.setMessage(exception.getMessage());
-
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-    }
-
-    @ExceptionHandler(value = Exception.class)
-    public ResponseEntity<ExceptionResponseDto> handleException(Exception exception) {
-        ExceptionResponseDto response = new ExceptionResponseDto();
-
-        exception.printStackTrace();
-        response.setMessage(exception.getMessage());
-
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-    }
-
-    @ExceptionHandler(value = MethodArgumentNotValidException.class)
-    public ResponseEntity<ExceptionResponseDto> handleMethodArgumentNotValidException(MethodArgumentNotValidException exception) {
-        ExceptionResponseDto response = new ExceptionResponseDto();
-
-        response.setMessage(extractDefaultMessageFromValidationException(exception));
-
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        return convertExceptionToHttp(exception, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(value = AccessDeniedException.class)
     public ResponseEntity<ExceptionResponseDto> handleAccessDeniedException(AccessDeniedException exception) {
-        ExceptionResponseDto response = new ExceptionResponseDto();
-
-        response.setMessage(exception.getMessage());
-
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        return convertExceptionToHttp(exception, HttpStatus.UNAUTHORIZED);
     }
 
-    private String extractDefaultMessageFromValidationException(MethodArgumentNotValidException exception) {
-        return Objects.requireNonNull(exception.getBindingResult().getFieldError()).getDefaultMessage();
+    @ExceptionHandler(value = Exception.class)
+    public ResponseEntity<ExceptionResponseDto> handleException(Exception exception) {
+        var response = convertExceptionToHttp(exception, HttpStatus.INTERNAL_SERVER_ERROR);
+        exception.printStackTrace();
+        return response;
+    }
+
+    @ExceptionHandler(value = MethodArgumentNotValidException.class)
+    public ResponseEntity<ExceptionResponseDto> handleMethodArgumentNotValidException(MethodArgumentNotValidException exception) {
+        var response = new ExceptionResponseDto();
+        response.setMessage(extractDefaultMessage(exception));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    private ResponseEntity<ExceptionResponseDto> convertExceptionToHttp(Exception exception, HttpStatus status) {
+        var response = new ExceptionResponseDto();
+        response.setMessage(exception.getMessage());
+        return ResponseEntity.status(status).body(response);
+    }
+
+    private String extractDefaultMessage(MethodArgumentNotValidException exception) {
+        return exception.getBindingResult().getFieldError().getDefaultMessage();
     }
 }

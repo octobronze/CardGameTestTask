@@ -1,8 +1,5 @@
 package com.example.CardGame.tables.composite_keys;
 
-import com.example.CardGame.tables.GameSession;
-import com.example.CardGame.tables.User;
-import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;

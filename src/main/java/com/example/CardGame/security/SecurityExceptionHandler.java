@@ -23,7 +23,7 @@ public class SecurityExceptionHandler implements AuthenticationEntryPoint, Acces
 
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws IOException {
-        ExceptionResponseDto responseDto = new ExceptionResponseDto();
+        var responseDto = new ExceptionResponseDto();
         if (exception instanceof JwtException) {
             responseDto.setMessage("Invalid JWT");
             response.getWriter().write(objectMapper.writeValueAsString(responseDto));
@@ -37,11 +37,11 @@ public class SecurityExceptionHandler implements AuthenticationEntryPoint, Acces
 
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException exception) throws IOException, ServletException {
-        ExceptionResponseDto responseDto = new ExceptionResponseDto();
+        var responseDto = new ExceptionResponseDto();
         if (exception instanceof AuthorizationDeniedException) {
             responseDto.setMessage("Access denied. Does user have permission to access resource?");
-           response.getWriter().write(objectMapper.writeValueAsString(responseDto));
-           response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write(objectMapper.writeValueAsString(responseDto));
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         }
     }
 }

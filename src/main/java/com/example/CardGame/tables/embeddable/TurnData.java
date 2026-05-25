@@ -6,21 +6,19 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.io.Serializable;
-
 @NoArgsConstructor
 @Setter
 @Getter
 @Embeddable
-public class TurnOrder implements Serializable {
-    @Column(name = "order_num", nullable = false)
-    private int orderNum;
+public class TurnData {
+    @Column(name = "\"order\"")
+    private Integer order;
 
     @Column(name = "is_current")
-    private boolean isCurrent;
+    private Boolean isCurrent;
 
-    public TurnOrder(int orderNum, boolean isCurrent) {
-        this.orderNum = orderNum;
+    public TurnData(Integer order, boolean isCurrent) {
+        this.order = order;
         this.isCurrent = isCurrent;
     }
 }

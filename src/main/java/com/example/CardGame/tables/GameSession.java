@@ -16,43 +16,32 @@ public class GameSession {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
 
-    @Column(name = "users_num", nullable = false)
+    @Column(name = "users_number", nullable = false)
     @Range(max = Consts.MAX_PLAYERS_PER_SESSION)
-    private int usersNum = 0;
+    private int usersNumber = 0;
 
     @Column(name = "state", nullable = false)
     @Enumerated(value = EnumType.ORDINAL)
-    private GameSession.StateEnum state;
+    private GameSession.State state;
 
     @JoinColumn(name = "created_by", nullable = false)
     @ManyToOne(fetch = FetchType.LAZY)
     private User createdBy;
 
-    @Column(name = "cards_num")
-    private Integer cardsNum;
+    @Column(name = "cards_number")
+    private Integer cardsNumber;
 
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "gameSession")
     private List<User_GameSession> gameSession_users;
 
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "gameSession")
-    private List<User_GameSessionStarted> gameSessionStarted_Users;
-
-    @OneToMany(fetch = FetchType.LAZY, mappedBy = "gameSession")
-    private List<Card_GameSessionStarted> gameSessionStarted_Cards;
+    private List<Card_GameSession> gameSession_Cards;
 
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "gameSession")
     private List<Turn> turns;
 
-    public void incUsersNum() {
-        usersNum ++;
-    }
-
-    public void decUsersNum() {
-        usersNum --;
-    }
-
     public static class Consts {
-        public static final int MAX_PLAYERS_PER_SESSION = 4;
+        public static final int MAX_PLAYERS_PER_SESSION = 3;
         public static final int MIN_PLAYERS_TO_START = 2;
         public static final int MAX_POINTS = 30;
     }
@@ -66,7 +55,7 @@ public class GameSession {
         public static final String ALREADY_STARTED = "Game session is already started";
     }
 
-    public enum StateEnum {
+    public enum State {
         WAIT_FOR_PLAYERS, IN_PROGRESS, FINISHED
     }
 }

@@ -14,12 +14,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
-import static com.example.CardGame.consts.ExceptionMessagesConsts.BAD_CREDENTIALS;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(isolation = Isolation.READ_COMMITTED)
 public class UserService {
+    private static final String BAD_CREDENTIALS = "bad credentials";
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
@@ -28,30 +31,22 @@ public class UserService {
     private long tokenLifeTimeMs;
 
     public UserLoginResponseDto loginUser(UserLoginRequestDto requestDto) {
-        User user = userRepository.findOne(
-                UserSpecification.builder()
-                        .login(requestDto.getLogin()).build()
-                )
-                .orElseThrow(() -> new BadRequestException(BAD_CREDENTIALS));
+        var user = userRepository.findOne(
+                UserSpecification.builder().login(requestDto.getLogin()).build()
+        ).orElseThrow(() -> new BadRequestException(BAD_CREDENTIALS));
         if (!passwordEncoder.matches(requestDto.getPassword(), user.getPassword())) {
             throw new BadRequestException(BAD_CREDENTIALS);
         }
-
-        UserLoginResponseDto responseDto = new UserLoginResponseDto();
-
-        responseDto.setToken(
-                jwtService.generateTokenByUserPrincipal(new UserPrincipal(user))
-        );
+        var responseDto = new UserLoginResponseDto();
+        responseDto.setToken(jwtService.generateTokenByUserPrincipal(new UserPrincipal(user)));
         responseDto.setLifeTimeMs(tokenLifeTimeMs);
-
         return responseDto;
     }
 
     public int registerUser(UserRegistrationRequestDto requestDto) {
-        User user = new User();
+        var user = new User();
         user.setName(requestDto.getName());
         user.setLogin(requestDto.getLogin());
-
         user.setPassword(passwordEncoder.encode(requestDto.getPassword()));
         try {
             User savedUser = userRepository.save(user);

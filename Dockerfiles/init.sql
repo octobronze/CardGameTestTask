@@ -2,9 +2,8 @@ create database card_game;
 
 \c card_game;
 
-drop table if exists "user_to_game_session_started";
 drop table if exists "user_to_game_session";
-drop table if exists "card_to_game_session_card_started";
+drop table if exists "card_to_game_session";
 drop table if exists "turn";
 drop table if exists "card";
 drop table if exists "game_session";
@@ -22,13 +21,13 @@ CREATE TABLE "user" (
 CREATE TABLE "game_session" (
 	"id" SERIAL NOT NULL,
 	"state" SMALLINT NOT NULL,
-	"users_num" INTEGER NOT NULL,
+	"users_number" INTEGER NOT NULL,
 	"created_by" INTEGER NOT NULL,
-	"cards_num" INTEGER NULL DEFAULT NULL,
+	"cards_number" INTEGER NULL DEFAULT NULL,
 	PRIMARY KEY ("id"),
 	CONSTRAINT "game_session_created_by" FOREIGN KEY ("created_by") REFERENCES "user" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION,
 	CONSTRAINT "game_session_state_check" CHECK (((state >= 0) AND (state <= 2))),
-	CONSTRAINT "game_session_users_num_check" CHECK (((users_num >= 0) AND (users_num <= 4)))
+	CONSTRAINT "game_session_users_num_check" CHECK (((users_number >= 0) AND (users_number <= 4)))
 );
 
 CREATE TABLE "card" (
@@ -45,25 +44,25 @@ CREATE TABLE "card" (
 
 CREATE TABLE "turn" (
 	"id" SERIAL NOT NULL,
-	"turn_num" INTEGER NOT NULL,
+	"order" INTEGER NOT NULL,
 	"card_id" INTEGER NOT NULL,
 	"game_session_id" INTEGER NOT NULL,
-	"user_id" INTEGER NOT NULL,
-	"points" INTEGER NULL DEFAULT NULL,
+	"current_user_id" INTEGER NOT NULL,
 	"target_user_id" INTEGER NULL DEFAULT NULL,
-	"points_difference" INTEGER NOT NULL,
+	"points" INTEGER NULL DEFAULT NULL,
+	"gained_points" INTEGER NOT NULL,
 	PRIMARY KEY ("id"),
 	CONSTRAINT "turn_target_user_id" FOREIGN KEY ("target_user_id") REFERENCES "user" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION,
-	CONSTRAINT "turn_user_id" FOREIGN KEY ("user_id") REFERENCES "user" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION,
+	CONSTRAINT "turn_user_id" FOREIGN KEY ("current_user_id") REFERENCES "user" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION,
 	CONSTRAINT "turn_card_id" FOREIGN KEY ("card_id") REFERENCES "card" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION,
 	CONSTRAINT "turn_game_session_id" FOREIGN KEY ("game_session_id") REFERENCES "game_session" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION
 );
 
-CREATE TABLE "card_to_game_session_card_started" (
+CREATE TABLE "card_to_game_session" (
 	"card_id" INTEGER NOT NULL,
 	"game_session_id" INTEGER NOT NULL,
 	"is_current" BOOLEAN NULL DEFAULT NULL,
-	"order_num" INTEGER NOT NULL,
+	"order" INTEGER NOT NULL,
 	PRIMARY KEY ("card_id", "game_session_id"),
 	CONSTRAINT "to_card_id" FOREIGN KEY ("card_id") REFERENCES "card" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION,
 	CONSTRAINT "to_game_session_id" FOREIGN KEY ("game_session_id") REFERENCES "game_session" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION
@@ -72,17 +71,9 @@ CREATE TABLE "card_to_game_session_card_started" (
 CREATE TABLE "user_to_game_session" (
 	"game_session_id" INTEGER NOT NULL,
 	"user_id" INTEGER NOT NULL,
-	PRIMARY KEY ("game_session_id", "user_id"),
-	CONSTRAINT "to_game_session_id" FOREIGN KEY ("game_session_id") REFERENCES "game_session" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION,
-	CONSTRAINT "to_user_id" FOREIGN KEY ("user_id") REFERENCES "user" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION
-);
-
-CREATE TABLE "user_to_game_session_started" (
-	"game_session_id" INTEGER NOT NULL,
-	"user_id" INTEGER NOT NULL,
-	"points" INTEGER NOT NULL DEFAULT 0,
 	"is_current" BOOLEAN NULL DEFAULT NULL,
-	"order_num" INTEGER NOT NULL,
+	"order" INTEGER NULL DEFAULT NULL,
+	"points" INTEGER NULL DEFAULT NULL,
 	PRIMARY KEY ("game_session_id", "user_id"),
 	CONSTRAINT "to_game_session_id" FOREIGN KEY ("game_session_id") REFERENCES "game_session" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION,
 	CONSTRAINT "to_user_id" FOREIGN KEY ("user_id") REFERENCES "user" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION

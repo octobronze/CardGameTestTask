@@ -6,20 +6,11 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "\"user\"",
-        uniqueConstraints = @UniqueConstraint(
-                columnNames = {"login"}
-        )
-)
+@Table(name = "\"user\"")
 @Getter
 @Setter
 @NoArgsConstructor
 public class User {
-    public static class ExceptionMessages {
-        public static final String USER_NOT_FOUND = "User not found";
-        public static final String USER_ALREADY_EXISTS = "User with such login already exists";
-    }
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
@@ -32,4 +23,9 @@ public class User {
 
     @Column(name = "password", nullable = false)
     private String password;
+
+    public static class ExceptionMessages {
+        public static final String USER_NOT_FOUND = "User not found";
+        public static final String USER_ALREADY_EXISTS = "User with such login already exists";
+    }
 }

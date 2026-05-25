@@ -15,13 +15,13 @@ public class Turn {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
 
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "current_user_id", nullable = false)
     @ManyToOne(fetch = FetchType.LAZY)
     private User user;
 
     @JoinColumn(name = "target_user_id")
     @ManyToOne(fetch = FetchType.LAZY)
-    private User targetUser;
+    private User target;
 
     @JoinColumn(name = "game_session_id", nullable = false)
     @ManyToOne(fetch = FetchType.LAZY)
@@ -31,9 +31,9 @@ public class Turn {
     @ManyToOne(fetch = FetchType.LAZY)
     private Card card;
 
-    @Column(name = "turn_num", nullable = false)
-    private int turnNum;
+    @Column(name = "\"order\"", nullable = false)
+    private int order;
 
-    @Column(name = "points_difference", nullable = false)
-    private int pointsDifference;
+    @Column(name = "gained_points", nullable = false)
+    private int gainedPoints;
 }

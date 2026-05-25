@@ -3,9 +3,9 @@ package com.example.CardGame;
 import com.example.CardGame.repos.*;
 import com.example.CardGame.services.GameSessionService;
 import com.example.CardGame.services.TurnService;
-import com.example.CardGame.specifications.User_GameSessionStartedSpecification;
+import com.example.CardGame.specifications.User_GameSessionSpecification;
 import com.example.CardGame.tables.*;
-import com.example.CardGame.tables.embeddable.TurnOrder;
+import com.example.CardGame.tables.embeddable.UserInfo;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -22,7 +22,7 @@ import java.util.stream.Stream;
 class TurnServiceUnitTests {
 	private final TurnRepository turnRepository = Mockito.mock(TurnRepository.class);
 	private final User_GameSessionStartedRepository userGameSessionStartedRepository = Mockito.mock(User_GameSessionStartedRepository.class);
-	private final Card_GameSessionStartedRepository cardGameSessionStartedRepository = Mockito.mock(Card_GameSessionStartedRepository.class);
+	private final Card_GameSessionRepository cardGameSessionStartedRepository = Mockito.mock(Card_GameSessionRepository.class);
 	private final GameSessionService gameSessionService = Mockito.mock(GameSessionService.class);
 	private final GameSessionRepository gameSessionRepository = Mockito.mock(GameSessionRepository.class);
 
@@ -51,17 +51,17 @@ class TurnServiceUnitTests {
 	private static final Card ACTION_DOUBLE_DOWN_CARD = new Card();
 	private static final Card BIG_POINT_CARD = new Card();
 	private static final GameSession GAME_SESSION_IN_PROGRESS = new GameSession();
-	private static final User_GameSessionStarted FIRST_PLAYER = new User_GameSessionStarted();
-	private static final TurnOrder PLAYER_TURN_ORDER = new TurnOrder();
-	private static final User_GameSessionStarted SECOND_PLAYER = new User_GameSessionStarted();
+	private static final User_GameSession FIRST_PLAYER = new User_GameSession();
+	private static final UserInfo PLAYER_TURN_ORDER = new UserInfo();
+	private static final User_GameSession SECOND_PLAYER = new User_GameSession();
 	private static final User FIRST_USER = new User();
 	private static final User SECOND_USER = new User();
-	private static final Card_GameSessionStarted ACTION_BLOCK_CARD_IN_SESSION = new Card_GameSessionStarted();
-	private static final Card_GameSessionStarted POINT_CARD_IN_SESSION = new Card_GameSessionStarted();
-	private static final Card_GameSessionStarted ACTION_STEAL_CARD_IN_SESSION = new Card_GameSessionStarted();
-	private static final Card_GameSessionStarted ACTION_DD_CARD_IN_SESSION = new Card_GameSessionStarted();
-	private static final Card_GameSessionStarted BIG_POINT_CARD_IN_SESSION = new Card_GameSessionStarted();
-	private static final TurnOrder CARD_TURN_ORDER = new TurnOrder();
+	private static final Card_GameSession ACTION_BLOCK_CARD_IN_SESSION = new Card_GameSession();
+	private static final Card_GameSession POINT_CARD_IN_SESSION = new Card_GameSession();
+	private static final Card_GameSession ACTION_STEAL_CARD_IN_SESSION = new Card_GameSession();
+	private static final Card_GameSession ACTION_DD_CARD_IN_SESSION = new Card_GameSession();
+	private static final Card_GameSession BIG_POINT_CARD_IN_SESSION = new Card_GameSession();
+	private static final UserInfo CARD_TURN_ORDER = new UserInfo();
 	private static final Turn PRE_FINAL_TURN = new Turn();
 
 	@BeforeEach
@@ -97,14 +97,14 @@ class TurnServiceUnitTests {
 		ACTION_BLOCK_CARD.setType(Card.TypeEnum.ACTION_CARD);
 		ACTION_BLOCK_CARD.setValue(BLOCK_CARD_VALUE);
 
-		ACTION_BLOCK_CARD_IN_SESSION.setTurnOrder(CARD_TURN_ORDER);
+		ACTION_BLOCK_CARD_IN_SESSION.setUserInfo(CARD_TURN_ORDER);
 		ACTION_BLOCK_CARD_IN_SESSION.setCard(ACTION_BLOCK_CARD);
 		ACTION_BLOCK_CARD_IN_SESSION.setGameSession(GAME_SESSION_IN_PROGRESS);
 
 		POINT_CARD.setType(Card.TypeEnum.POINTS_CARD);
 		POINT_CARD.setValue(POINT_CARD_VALUE);
 
-		POINT_CARD_IN_SESSION.setTurnOrder(CARD_TURN_ORDER);
+		POINT_CARD_IN_SESSION.setUserInfo(CARD_TURN_ORDER);
 		POINT_CARD_IN_SESSION.setCard(POINT_CARD);
 		POINT_CARD_IN_SESSION.setGameSession(GAME_SESSION_IN_PROGRESS);
 
@@ -112,7 +112,7 @@ class TurnServiceUnitTests {
 		ACTION_STEAL_CARD.setType(Card.TypeEnum.ACTION_CARD);
 		ACTION_STEAL_CARD.setValue(STEAL_CARD_VALUE);
 
-		ACTION_STEAL_CARD_IN_SESSION.setTurnOrder(CARD_TURN_ORDER);
+		ACTION_STEAL_CARD_IN_SESSION.setUserInfo(CARD_TURN_ORDER);
 		ACTION_STEAL_CARD_IN_SESSION.setCard(ACTION_STEAL_CARD);
 		ACTION_STEAL_CARD_IN_SESSION.setGameSession(GAME_SESSION_IN_PROGRESS);
 
@@ -120,14 +120,14 @@ class TurnServiceUnitTests {
 		ACTION_DOUBLE_DOWN_CARD.setType(Card.TypeEnum.ACTION_CARD);
 		ACTION_DOUBLE_DOWN_CARD.setValue(DD_CARD_VALUE);
 
-		ACTION_DD_CARD_IN_SESSION.setTurnOrder(CARD_TURN_ORDER);
+		ACTION_DD_CARD_IN_SESSION.setUserInfo(CARD_TURN_ORDER);
 		ACTION_DD_CARD_IN_SESSION.setCard(ACTION_DOUBLE_DOWN_CARD);
 		ACTION_DD_CARD_IN_SESSION.setGameSession(GAME_SESSION_IN_PROGRESS);
 
 		BIG_POINT_CARD.setType(Card.TypeEnum.POINTS_CARD);
 		BIG_POINT_CARD.setValue(BIG_POINT_CARD_VALUE);
 
-		BIG_POINT_CARD_IN_SESSION.setTurnOrder(CARD_TURN_ORDER);
+		BIG_POINT_CARD_IN_SESSION.setUserInfo(CARD_TURN_ORDER);
 		BIG_POINT_CARD_IN_SESSION.setCard(BIG_POINT_CARD);
 		BIG_POINT_CARD_IN_SESSION.setGameSession(GAME_SESSION_IN_PROGRESS);
 
@@ -138,9 +138,9 @@ class TurnServiceUnitTests {
 	@MethodSource("provideData_for_test_for_doTurnAndReturnIsGameSessionFinished_session_finished")
 	public void test_for_doTurnAndReturnIsGameSessionFinished_session_finished(int userId, int sessionId,
 																			   GameSession gameSession,
-																			   User_GameSessionStarted player,
-																			   User_GameSessionStarted secondPlayer,
-																			   Card_GameSessionStarted cardInSession,
+																			   User_GameSession player,
+																			   User_GameSession secondPlayer,
+																			   Card_GameSession cardInSession,
 																			   int nextUserTurnNum,
 																			   Turn preFinalTurn) {
 		Mockito.doReturn(Optional.ofNullable(gameSession))
@@ -148,7 +148,7 @@ class TurnServiceUnitTests {
 		Mockito.doReturn(Optional.ofNullable(player)).when(userGameSessionStartedRepository).findWithLockForUpdate(
 				Mockito.argThat(
 						new PlayerSpecificationMatcher(
-								User_GameSessionStartedSpecification.builder()
+								User_GameSessionSpecification.builder()
 										.userId(userId).build()
 						)),
 				Mockito.any(Class.class)
@@ -156,7 +156,7 @@ class TurnServiceUnitTests {
 		Mockito.doReturn(Optional.ofNullable(player)).when(userGameSessionStartedRepository).findOne(
 				Mockito.argThat(
 						new PlayerSpecificationMatcher(
-								User_GameSessionStartedSpecification.builder()
+								User_GameSessionSpecification.builder()
 										.userGameSessionStarted(player).build()
 						)
 				)
@@ -167,7 +167,7 @@ class TurnServiceUnitTests {
 		Mockito.doReturn(Optional.ofNullable(secondPlayer)).when(userGameSessionStartedRepository).findWithLockForUpdate(
 				Mockito.argThat(
 						new PlayerSpecificationMatcher(
-								User_GameSessionStartedSpecification.builder()
+								User_GameSessionSpecification.builder()
 										.orderNum(nextUserTurnNum).build()
 						)
 				),
@@ -187,17 +187,17 @@ class TurnServiceUnitTests {
 	@MethodSource("provideData_for_test_for_doTurnAndReturnIsGameSessionFinished_not_finished")
 	public void test_for_doTurnAndReturnIsGameSessionFinished_not_finished(int userId, int sessionId, Integer targetUserId,
 																				   GameSession gameSession,
-																				   User_GameSessionStarted player,
-																				   User_GameSessionStarted secondPlayer,
-																				   Card_GameSessionStarted cardInSession,
-																				   User_GameSessionStarted targetPlayer,
+																				   User_GameSession player,
+																				   User_GameSession secondPlayer,
+																				   Card_GameSession cardInSession,
+																				   User_GameSession targetPlayer,
 																				   int nextUserTurnNum) {
 		Mockito.doReturn(Optional.ofNullable(gameSession))
 				.when(gameSessionRepository).findWithLockForUpdate(Mockito.any(Specification.class), Mockito.any(Class.class));
 		Mockito.doReturn(Optional.ofNullable(player)).when(userGameSessionStartedRepository).findWithLockForUpdate(
 				Mockito.argThat(
 						new PlayerSpecificationMatcher(
-								User_GameSessionStartedSpecification.builder()
+								User_GameSessionSpecification.builder()
 										.userId(userId).build()
 						)),
 				Mockito.any(Class.class)
@@ -205,7 +205,7 @@ class TurnServiceUnitTests {
 		Mockito.doReturn(Optional.ofNullable(player)).when(userGameSessionStartedRepository).findOne(
 				Mockito.argThat(
 						new PlayerSpecificationMatcher(
-								User_GameSessionStartedSpecification.builder()
+								User_GameSessionSpecification.builder()
 										.userGameSessionStarted(player).build()
 						)
 				)
@@ -216,7 +216,7 @@ class TurnServiceUnitTests {
 			Mockito.doReturn(Optional.ofNullable(targetPlayer)).when(userGameSessionStartedRepository).findWithLockForUpdate(
 					Mockito.argThat(
 							new PlayerSpecificationMatcher(
-									User_GameSessionStartedSpecification.builder()
+									User_GameSessionSpecification.builder()
 											.userId(targetUserId).build()
 							)),
 					Mockito.any(Class.class)
@@ -224,7 +224,7 @@ class TurnServiceUnitTests {
 			Mockito.doReturn(Optional.ofNullable(targetPlayer)).when(userGameSessionStartedRepository).findOne(
 					Mockito.argThat(
 							new PlayerSpecificationMatcher(
-									User_GameSessionStartedSpecification.builder()
+									User_GameSessionSpecification.builder()
 											.userGameSessionStarted(targetPlayer).build()
 							)
 					)
@@ -234,7 +234,7 @@ class TurnServiceUnitTests {
 		Mockito.doReturn(Optional.ofNullable(secondPlayer)).when(userGameSessionStartedRepository).findWithLockForUpdate(
 				Mockito.argThat(
 						new PlayerSpecificationMatcher(
-								User_GameSessionStartedSpecification.builder()
+								User_GameSessionSpecification.builder()
 										.orderNum(nextUserTurnNum).build()
 						)
 				),
@@ -305,15 +305,15 @@ class TurnServiceUnitTests {
 	}
 
 
-	private static class PlayerSpecificationMatcher implements ArgumentMatcher<User_GameSessionStartedSpecification> {
-		private final User_GameSessionStartedSpecification left;
+	private static class PlayerSpecificationMatcher implements ArgumentMatcher<User_GameSessionSpecification> {
+		private final User_GameSessionSpecification left;
 
-		public PlayerSpecificationMatcher(User_GameSessionStartedSpecification left) {
+		public PlayerSpecificationMatcher(User_GameSessionSpecification left) {
 			this.left = left;
 		}
 
 		@Override
-		public boolean matches(User_GameSessionStartedSpecification right) {
+		public boolean matches(User_GameSessionSpecification right) {
 			return
 					(
 							right.getUserId() != null && left.getUserId() != null

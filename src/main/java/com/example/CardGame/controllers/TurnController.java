@@ -17,17 +17,17 @@ public class TurnController {
     @GetMapping("/current/info/session/{sessionId}")
     public ResponseEntity<CurrentTurnInfoResponseDto> getCurrentTurnInfo(Authentication authentication,
                                                                          @PathVariable(name = "sessionId") int gameSessionId) {
-        UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
-
+        var userPrincipal = (UserPrincipal) authentication.getPrincipal();
         return ResponseEntity.ok(turnService.getCurrentTurnInfo(userPrincipal.getId(), gameSessionId));
     }
 
     @PostMapping("/session/{sessionId}")
-    public ResponseEntity<Boolean> doTurnAndReturnIsGameSessionFinished(Authentication authentication,
-                                                                        @RequestParam(name = "targetUserId", required = false) Integer targetUserId,
-                                                                        @PathVariable(name = "sessionId") int gameSessionId) {
-        UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
-
-        return ResponseEntity.ok(turnService.doTurnAndReturnIsGameSessionFinished(userPrincipal.getId(), gameSessionId, targetUserId));
+    public ResponseEntity<Boolean> doTurn(
+            Authentication authentication,
+            @RequestParam(name = "targetUserId", required = false) Integer targetUserId,
+            @PathVariable(name = "sessionId") int gameSessionId
+    ) {
+        var userPrincipal = (UserPrincipal) authentication.getPrincipal();
+        return ResponseEntity.ok(turnService.doTurn(userPrincipal.getId(), gameSessionId, targetUserId));
     }
 }
